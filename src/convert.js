@@ -4,12 +4,25 @@ const _ = require('lodash');
 const sdk = require('postman-collection');
 
 /**
+ * Simple logger with colored output and levels
+ */
+const logger = {
+  info: (message) => console.log(`\x1b[36mℹ️ INFO:\x1b[0m ${message}`),
+  success: (message) => console.log(`\x1b[32m✅ SUCCESS:\x1b[0m ${message}`),
+  warn: (message) => console.warn(`\x1b[33m⚠️ WARNING:\x1b[0m ${message}`),
+  error: (message) => console.error(`\x1b[31m❌ ERROR:\x1b[0m ${message}`),
+  debug: (message) => process.env.DEBUG && console.log(`\x1b[90m🔍 DEBUG:\x1b[0m ${message}`),
+};
+
+/**
  * Converts a Postman test script to Mocha assertions using Chai and Supertest
  * @param {string} postmanScript - The Postman test script content
  * @returns {string} - Equivalent test assertions in Chai syntax
  */
 function convertPostmanTestToMocha(postmanScript) {
   if (!postmanScript) return '';
+  
+  logger.debug('Converting Postman test script to Mocha/Chai assertions');
 
   // Use a single regex replacement map for better maintainability
   const replacements = [
@@ -36,9 +49,12 @@ function convertPostmanTestToMocha(postmanScript) {
   ];
 
   // Apply all replacements in a single pass
-  return replacements.reduce((script, { pattern, replacement }) => {
+  const result = replacements.reduce((script, { pattern, replacement }) => {
     return script.replace(pattern, replacement);
   }, postmanScript);
+  
+  logger.debug('Test script conversion completed');
+  return result;
 }
 
 /**
@@ -48,9 +64,14 @@ function convertPostmanTestToMocha(postmanScript) {
  * @returns {string} - The generated Mocha test code
  */
 function generateMochaTestFromRequest(item, parentName) {
-  if (!item?.name) return '';
+  if (!item?.name) {
+    logger.warn('Skipping unnamed request item');
+    return '';
+  }
 
   const testName = `${parentName} - ${item.name}`;
+  logger.info(`Generating test for "${testName}"`);
+  
   const request = item.request;
   const method = (request?.method || 'GET').toLowerCase();
   
@@ -60,8 +81,15 @@ function generateMochaTestFromRequest(item, parentName) {
   
   if (request?.url) {
     url = request.url.toString();
-    // Extract path portion without host/protocol
-    pathname = new URL(url).pathname || '/';
+    try {
+      // Extract path portion without host/protocol
+      pathname = new URL(url).pathname || '/';
+      logger.debug(`Endpoint path: ${pathname}`);
+    } catch (error) {
+      logger.warn(`Could not parse URL "${url}". Using default pathname: /`);
+    }
+  } else {
+    logger.warn(`Request "${item.name}" has no URL defined`);
   }
 
   // Extract body if it exists
@@ -69,14 +97,22 @@ function generateMochaTestFromRequest(item, parentName) {
   if (request?.body?.mode === 'raw' && request.body.raw) {
     try {
       body = JSON.parse(request.body.raw);
-    } catch {
+      logger.debug(`Request body parsed as JSON with ${Object.keys(body).length} properties`);
+    } catch (error) {
       body = request.body.raw;
+      logger.debug('Request body used as raw string (not valid JSON)');
     }
   }
 
   // Extract test scripts from event
   const testEvent = item.events?.find(e => e.listen === 'test');
   const testScript = testEvent?.script?.exec?.join('\n') || '';
+  if (testScript) {
+    logger.debug(`Found test script with ${testScript.split('\n').length} lines`);
+  } else {
+    logger.debug('No test script found in request');
+  }
+  
   const mochaAssertions = convertPostmanTestToMocha(testScript);
 
   // Build request code more cleanly
@@ -102,14 +138,19 @@ describe('${testName}', function() {
  */
 function extractBaseUrl(collection) {
   if (!collection?.items?.members?.length) {
+    logger.warn('Collection has no items, using default base URL');
     return 'https://api.example.com'; // Default base URL
   }
 
+  logger.debug('Searching for base URL in collection');
+  
   // Find first URL using a recursive function with SDK methods
   function findFirstUrl(itemGroup) {
     for (const item of itemGroup.items.members) {
       if (item.request?.url) {
-        return item.request.url.protocol + '://' + item.request.url.host.join('.');
+        const baseUrl = item.request.url.protocol + '://' + item.request.url.host.join('.');
+        logger.debug(`Found base URL: ${baseUrl}`);
+        return baseUrl;
       }
       
       if (item.items) {
@@ -120,7 +161,12 @@ function extractBaseUrl(collection) {
     return null;
   }
 
-  return findFirstUrl(collection) || 'https://api.example.com';
+  const baseUrl = findFirstUrl(collection) || 'https://api.example.com';
+  if (baseUrl === 'https://api.example.com') {
+    logger.warn('Could not find a valid base URL in collection, using default');
+  }
+  
+  return baseUrl;
 }
 
 /**
@@ -128,9 +174,17 @@ function extractBaseUrl(collection) {
  * @param {sdk.ItemGroup} itemGroup - Collection item group
  * @param {string} outputDir - The output directory
  * @param {string} parentPath - The parent folder path
+ * @param {number} level - Recursion level for logging indentation
+ * @returns {number} - Number of processed items
  */
-function processItems(itemGroup, outputDir, parentPath = '') {
-  if (!itemGroup?.items?.members) return;
+function processItems(itemGroup, outputDir, parentPath = '', level = 0) {
+  if (!itemGroup?.items?.members) {
+    logger.warn(`${' '.repeat(level * 2)}No items found in group`);
+    return 0;
+  }
+
+  const indent = ' '.repeat(level * 2);
+  let processedCount = 0;
 
   itemGroup.items.members.forEach(item => {
     if (item.items && item.items.members.length > 0) {
@@ -138,12 +192,21 @@ function processItems(itemGroup, outputDir, parentPath = '') {
       const folderName = _.kebabCase(item.name);
       const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
       
+      logger.info(`${indent}Processing folder: ${item.name}`);
+      
       // Create directory for this folder
       const folderDir = path.join(outputDir, folderPath);
-      fs.mkdirSync(folderDir, { recursive: true });
+      try {
+        fs.mkdirSync(folderDir, { recursive: true });
+        logger.debug(`${indent}Created directory: ${folderDir}`);
+      } catch (error) {
+        logger.error(`${indent}Failed to create directory: ${folderDir} - ${error.message}`);
+      }
 
       // Process contained items
-      processItems(item, outputDir, folderPath);
+      const processed = processItems(item, outputDir, folderPath, level + 1);
+      processedCount += processed;
+      logger.debug(`${indent}Processed ${processed} items in folder: ${item.name}`);
     } else if (item.request) {
       // This is a request - generate test file
       const fileName = `${_.kebabCase(item.name)}.test.js`;
@@ -151,6 +214,8 @@ function processItems(itemGroup, outputDir, parentPath = '') {
         ? path.join(outputDir, parentPath, fileName)
         : path.join(outputDir, fileName);
 
+      logger.info(`${indent}Generating test file: ${fileName}`);
+      
       // Calculate relative path to setup file
       const relativePath = path.relative(path.dirname(filePath), path.join(outputDir, 'setup.js'))
         .replace(/\\/g, '/');
@@ -163,9 +228,17 @@ const { request, expect } = require('${relativePath}');
 ${generateMochaTestFromRequest(item, parentName)}
 `;
 
-      fs.writeFileSync(filePath, fileContent);
+      try {
+        fs.writeFileSync(filePath, fileContent);
+        logger.success(`${indent}Created test file: ${filePath}`);
+        processedCount++;
+      } catch (error) {
+        logger.error(`${indent}Failed to write file: ${filePath} - ${error.message}`);
+      }
     }
   });
+  
+  return processedCount;
 }
 
 /**
@@ -173,22 +246,39 @@ ${generateMochaTestFromRequest(item, parentName)}
  * @param {Object} rawCollection - The raw Postman collection object
  * @param {string} outputDir - The directory where test files will be created
  * @param {Object} rawEnvironment - Optional raw Postman environment variables
+ * @returns {number} - Number of generated test files
  */
 function processCollection(rawCollection, outputDir, rawEnvironment = null) {
+  logger.info(`Processing collection: "${rawCollection.info?.name || 'Unnamed Collection'}"`);
+  
   // Convert raw JSON to SDK objects
   const collection = new sdk.Collection(rawCollection);
   const environment = rawEnvironment ? new sdk.VariableScope(rawEnvironment) : null;
   
+  if (environment) {
+    logger.info(`Found environment with ${environment.values?.members?.length || 0} variables`);
+  }
+  
   if (!collection?.items) {
-    console.error('Invalid collection format');
-    return;
+    logger.error('Invalid collection format');
+    return 0;
   }
 
+  logger.info(`Output directory: ${outputDir}`);
+  
   // Make sure output directory exists
-  fs.mkdirSync(outputDir, { recursive: true });
+  try {
+    fs.mkdirSync(outputDir, { recursive: true });
+    logger.debug(`Created output directory: ${outputDir}`);
+  } catch (error) {
+    logger.error(`Failed to create output directory: ${error.message}`);
+    return 0;
+  }
 
   // Generate setup file with environment variables support
   const baseUrl = extractBaseUrl(collection);
+  logger.info(`Using base URL: ${baseUrl}`);
+  
   const setupFileContent = `
 const supertest = require('supertest');
 const { expect } = require('chai');
@@ -206,10 +296,19 @@ module.exports = {
 };
 `;
 
-  fs.writeFileSync(path.join(outputDir, 'setup.js'), setupFileContent);
+  try {
+    fs.writeFileSync(path.join(outputDir, 'setup.js'), setupFileContent);
+    logger.success(`Created setup file: ${path.join(outputDir, 'setup.js')}`);
+  } catch (error) {
+    logger.error(`Failed to write setup file: ${error.message}`);
+  }
 
   // Process each item in the collection
-  processItems(collection, outputDir);
+  logger.info('Processing collection items...');
+  const processedCount = processItems(collection, outputDir);
+  
+  logger.success(`Successfully generated ${processedCount} test files in ${outputDir}`);
+  return processedCount;
 }
 
 /**
@@ -218,19 +317,26 @@ module.exports = {
  * @returns {Object} - Key-value pairs of environment variables
  */
 function extractEnvironmentVariables(environment) {
-  if (!environment?.values?.members?.length) return {};
+  if (!environment?.values?.members?.length) {
+    logger.debug('No environment variables found');
+    return {};
+  }
   
-  return environment.values.members.reduce((acc, variable) => {
+  const variables = environment.values.members.reduce((acc, variable) => {
     if (variable.key && variable.value) {
       acc[variable.key] = variable.value;
     }
     return acc;
   }, {});
+  
+  logger.debug(`Extracted ${Object.keys(variables).length} environment variables`);
+  return variables;
 }
 
 module.exports = {
   processCollection,
   generateMochaTestFromRequest,
   convertPostmanTestToMocha,
-  extractBaseUrl
+  extractBaseUrl,
+  logger
 };

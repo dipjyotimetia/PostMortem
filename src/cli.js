@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const { existsSync } = require('node:fs');
 const path = require('node:path');
 const { Command } = require('commander');
-const { processCollection } = require('./convert');
+const { processCollection, logger } = require('./convert');
 
 async function readJsonFile(filePath) {
   try {
@@ -26,41 +26,50 @@ async function run() {
   const program = new Command();
   
   program
-    .name('postman-to-mocha')
+    .name('postmorterm')
     .description('Convert Postman collections to Mocha/Supertest tests')
     .version('1.0.0')
     .requiredOption('-c, --collection <path>', 'Path to Postman collection JSON file')
     .option('-o, --output <directory>', 'Output directory for the generated test files', './test')
-    .option('-e, --environment <path>', 'Path to Postman environment JSON file (optional)');
+    .option('-e, --environment <path>', 'Path to Postman environment JSON file (optional)')
+    .option('-d, --debug', 'Enable debug logging', false);
     
   program.parse();
   const options = program.opts();
   
+  // Set debug flag if specified
+  if (options.debug) {
+    process.env.DEBUG = 'true';
+    logger.info('Debug mode enabled');
+  }
+  
   try {
     // Read collection file
+    logger.info(`Reading collection file: ${options.collection}`);
     const collectionJson = await readJsonFile(options.collection);
     
     // Read environment file if provided
     let environmentJson = null;
     if (options.environment) {
       try {
+        logger.info(`Reading environment file: ${options.environment}`);
         environmentJson = await readJsonFile(options.environment);
       } catch (error) {
-        console.warn(`Warning: ${error.message}`);
+        logger.warn(`${error.message}`);
       }
     }
     
     // Process the collection
-    processCollection(collectionJson, options.output, environmentJson);
-    console.log(`✅ Successfully generated tests in ${options.output}`);
+    const fileCount = processCollection(collectionJson, options.output, environmentJson);
+    logger.success(`Successfully generated ${fileCount} tests in ${options.output}`);
     
   } catch (error) {
-    console.error(`❌ Error: ${error.message}`);
+    logger.error(`${error.message}`);
     process.exit(1);
   }
 }
 
 run().catch(error => {
-  console.error(`❌ Unhandled error: ${error.message}`);
+  logger.error(`Unhandled error: ${error.message}`);
   process.exit(1);
 });
