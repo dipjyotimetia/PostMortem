@@ -1,5 +1,5 @@
 {
-  "name": "postmortem",
+  "name": "postmorterm",
   "version": "1.0.0",
   "description": "Convert Postman collections to Mocha/Supertest tests",
   "main": "cli.js",
