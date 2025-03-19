@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const _ = require('lodash');
+const sdk = require('postman-collection');
 
 /**
  * Converts a Postman test script to Mocha assertions using Chai and Supertest
@@ -42,37 +43,46 @@ function convertPostmanTestToMocha(postmanScript) {
 
 /**
  * Generates a Mocha test file from a Postman request
- * @param {Object} request - The Postman request object
+ * @param {sdk.Item} item - The Postman request item
  * @param {string} parentName - The name of the parent folder
  * @returns {string} - The generated Mocha test code
  */
-function generateMochaTestFromRequest(request, parentName) {
-  if (!request?.name) return '';
+function generateMochaTestFromRequest(item, parentName) {
+  if (!item?.name) return '';
 
-  const testName = `${parentName} - ${request.name}`;
-  const method = (request.request?.method || 'GET').toLowerCase();
-  const url = request.request?.url?.raw || '';
-  const path = url ? '/' + url.split('/').slice(3).join('/') : '/';
+  const testName = `${parentName} - ${item.name}`;
+  const request = item.request;
+  const method = (request?.method || 'GET').toLowerCase();
+  
+  // Use SDK's URL parsing capabilities
+  let url = '';
+  let pathname = '/';
+  
+  if (request?.url) {
+    url = request.url.toString();
+    // Extract path portion without host/protocol
+    pathname = new URL(url).pathname || '/';
+  }
 
   // Extract body if it exists
   let body = null;
-  if (request.request?.body?.raw) {
+  if (request?.body?.mode === 'raw' && request.body.raw) {
     try {
-      body = JSON.parse(request.request.body.raw);
+      body = JSON.parse(request.body.raw);
     } catch {
-      body = request.request.body.raw;
+      body = request.body.raw;
     }
   }
 
-  // Extract test script using optional chaining
-  const testEvent = request.event?.find(e => e.listen === 'test');
+  // Extract test scripts from event
+  const testEvent = item.events?.find(e => e.listen === 'test');
   const testScript = testEvent?.script?.exec?.join('\n') || '';
   const mochaAssertions = convertPostmanTestToMocha(testScript);
 
   // Build request code more cleanly
   const requestCode = method === 'get'
-    ? `const response = await request.get('${path}');`
-    : `const response = await request.${method}('${path}')${body ? `\n        .send(${JSON.stringify(body, null, 2)})` : ''};`;
+    ? `const response = await request.get('${pathname}');`
+    : `const response = await request.${method}('${pathname}')${body ? `\n        .send(${JSON.stringify(body, null, 2)})` : ''};`;
 
   return `
 describe('${testName}', function() {
@@ -87,43 +97,43 @@ describe('${testName}', function() {
 
 /**
  * Extracts the base URL from a collection
- * @param {Object} collection - The Postman collection object
+ * @param {sdk.Collection} collection - The Postman collection object
  * @returns {string} - The base URL
  */
 function extractBaseUrl(collection) {
-  if (!collection?.item?.length) {
+  if (!collection?.items?.members?.length) {
     return 'https://api.example.com'; // Default base URL
   }
 
-  // Try to find the first URL in the collection using a recursive function
-  function findFirstUrl(items) {
-    for (const item of items) {
-      if (item.request?.url?.raw) {
-        const url = item.request.url.raw;
-        return url.split('/').slice(0, 3).join('/');
+  // Find first URL using a recursive function with SDK methods
+  function findFirstUrl(itemGroup) {
+    for (const item of itemGroup.items.members) {
+      if (item.request?.url) {
+        return item.request.url.protocol + '://' + item.request.url.host.join('.');
       }
-      if (item.item) {
-        const url = findFirstUrl(item.item);
+      
+      if (item.items) {
+        const url = findFirstUrl(item);
         if (url) return url;
       }
     }
     return null;
   }
 
-  return findFirstUrl(collection.item) || 'https://api.example.com';
+  return findFirstUrl(collection) || 'https://api.example.com';
 }
 
 /**
  * Processes Postman collection items recursively
- * @param {Array} items - Collection items array
+ * @param {sdk.ItemGroup} itemGroup - Collection item group
  * @param {string} outputDir - The output directory
  * @param {string} parentPath - The parent folder path
  */
-function processItems(items, outputDir, parentPath = '') {
-  if (!Array.isArray(items)) return;
+function processItems(itemGroup, outputDir, parentPath = '') {
+  if (!itemGroup?.items?.members) return;
 
-  items.forEach(item => {
-    if (item.item && Array.isArray(item.item)) {
+  itemGroup.items.members.forEach(item => {
+    if (item.items && item.items.members.length > 0) {
       // This is a folder - process recursively
       const folderName = _.kebabCase(item.name);
       const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
@@ -133,7 +143,7 @@ function processItems(items, outputDir, parentPath = '') {
       fs.mkdirSync(folderDir, { recursive: true });
 
       // Process contained items
-      processItems(item.item, outputDir, folderPath);
+      processItems(item, outputDir, folderPath);
     } else if (item.request) {
       // This is a request - generate test file
       const fileName = `${_.kebabCase(item.name)}.test.js`;
@@ -160,12 +170,16 @@ ${generateMochaTestFromRequest(item, parentName)}
 
 /**
  * Processes a Postman collection and generates Mocha test files
- * @param {Object} collection - The Postman collection object
+ * @param {Object} rawCollection - The raw Postman collection object
  * @param {string} outputDir - The directory where test files will be created
- * @param {Object} environment - Optional Postman environment variables
+ * @param {Object} rawEnvironment - Optional raw Postman environment variables
  */
-function processCollection(collection, outputDir, environment = null) {
-  if (!collection?.item) {
+function processCollection(rawCollection, outputDir, rawEnvironment = null) {
+  // Convert raw JSON to SDK objects
+  const collection = new sdk.Collection(rawCollection);
+  const environment = rawEnvironment ? new sdk.VariableScope(rawEnvironment) : null;
+  
+  if (!collection?.items) {
     console.error('Invalid collection format');
     return;
   }
@@ -195,20 +209,20 @@ module.exports = {
   fs.writeFileSync(path.join(outputDir, 'setup.js'), setupFileContent);
 
   // Process each item in the collection
-  processItems(collection.item, outputDir);
+  processItems(collection, outputDir);
 }
 
 /**
- * Extract environment variables from a Postman environment file
- * @param {Object} environment - The Postman environment object
+ * Extract environment variables from a Postman environment object
+ * @param {sdk.VariableScope} environment - The Postman environment SDK object
  * @returns {Object} - Key-value pairs of environment variables
  */
 function extractEnvironmentVariables(environment) {
-  if (!environment?.values?.length) return {};
+  if (!environment?.values?.members?.length) return {};
   
-  return environment.values.reduce((acc, item) => {
-    if (item.key && item.value) {
-      acc[item.key] = item.value;
+  return environment.values.members.reduce((acc, variable) => {
+    if (variable.key && variable.value) {
+      acc[variable.key] = variable.value;
     }
     return acc;
   }, {});

@@ -31,3 +31,59 @@ postmorterm -c ./my-collection.json -o ./test-output -e ./environment.json
 - `-e, --environment <path>` - Path to Postman environment JSON file (optional)
 - `--version` - Display version information
 - `--help` - Display help information
+
+### Quick Start with NPM Script
+
+```bash
+npm run convert
+```
+
+This will convert the example Platzi API collection included in the repo.
+
+## Project Structure
+
+```
+postmorterm/
+├── collection/             # Example Postman collections
+│   └── Platzi_postman_collection.json
+├── src/
+│   ├── cli.js              # Command-line interface
+│   └── convert.js          # Core conversion logic
+├── test/                   # Generated tests will be stored here
+└── package.json            # Project dependencies and scripts
+```
+
+## How It Works
+
+PostMorterm utilizes the [postman-collection](https://github.com/postmanlabs/postman-collection) SDK to parse Postman collections and transform them into Mocha/Chai/Supertest tests by:
+
+1. Reading the Postman collection structure
+2. Extracting requests, tests, and folder organization
+3. Converting Postman script assertions to equivalent Chai assertions
+4. Generating properly structured test files that maintain the original collection organization
+5. Creating a setup file with configuration for easy test execution
+
+## Generated Test Structure
+
+For each request in your Postman collection, PostMorterm generates:
+
+- A Mocha test file with the request details
+- Test assertions converted from Postman's syntax to Chai
+- Proper folder structure matching your Postman organization
+- A centralized setup file with environment variables and configuration
+
+## Example
+
+**Postman Test:**
+```javascript
+pm.test("Response status code is 200", function () {
+    pm.response.to.have.status(200);
+});
+```
+
+**Generated Mocha/Chai Test:**
+```javascript
+it("Response status code is 200", function () {
+    expect(response.status).to.equal(200);
+});
+```
