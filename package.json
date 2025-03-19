@@ -1,8 +1,8 @@
 {
-  "name": "postman-to-mocha",
+  "name": "postmortem",
   "version": "1.0.0",
   "description": "Convert Postman collections to Mocha/Supertest tests",
-  "main": "postman-to-mocha-converter.js",
+  "main": "cli.js",
   "bin": {
     "postman-to-mocha": "./src/cli.js"
   },
