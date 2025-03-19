@@ -2,13 +2,12 @@
   "name": "postmorterm",
   "version": "1.0.0",
   "description": "Convert Postman collections to Mocha/Supertest tests",
-  "main": "cli.js",
   "bin": {
-    "postman-to-mocha": "./src/cli.js"
+    "postmorterm": "./src/cli.js"
   },
   "scripts": {
     "test": "mocha",
-    "convert": "node src/cli.js -c ./Platzi_postman_collection.json -o ./test"
+    "convert": "node src/cli.js -c ./collection/Platzi_postman_collection.json -o ./test"
   },
   "keywords": [
     "postman",
