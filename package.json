@@ -1,0 +1,36 @@
+{
+  "name": "postman-to-mocha",
+  "version": "1.0.0",
+  "description": "Convert Postman collections to Mocha/Supertest tests",
+  "main": "postman-to-mocha-converter.js",
+  "bin": {
+    "postman-to-mocha": "./src/cli.js"
+  },
+  "scripts": {
+    "test": "mocha",
+    "convert": "node src/cli.js -c ./Platzi_postman_collection.json -o ./test"
+  },
+  "keywords": [
+    "postman",
+    "mocha",
+    "supertest",
+    "api",
+    "testing",
+    "conversion"
+  ],
+  "author": "Dipjyoti Metia",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "mocha": "^11.1.0",
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

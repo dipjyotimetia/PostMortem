@@ -1,0 +1,1103 @@
+{
+	"info": {
+		"_postman_id": "411146fe-7e74-4b2b-b64f-e324749ca80c",
+		"name": "Platzi Fake Store API Copy",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "1397965"
+	},
+	"item": [
+		{
+			"name": "Rest API",
+			"item": [
+				{
+					"name": "products",
+					"item": [
+						{
+							"name": "getAll",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 200\", function () {",
+											"    pm.expect(pm.response.code).to.equal(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response has the required fields\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('array');",
+											"    responseData.forEach(function(product) {",
+											"        pm.expect(product).to.have.property('id');",
+											"        pm.expect(product).to.have.property('title');",
+											"        pm.expect(product).to.have.property('slug');",
+											"        pm.expect(product).to.have.property('price');",
+											"        pm.expect(product).to.have.property('description');",
+											"        pm.expect(product).to.have.property('category');",
+											"        pm.expect(product).to.have.property('images');",
+											"        pm.expect(product).to.have.property('creationAt');",
+											"        pm.expect(product).to.have.property('updatedAt');",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Validate the category object\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('array');",
+											"    responseData.forEach(function(product) {",
+											"        pm.expect(product.category).to.be.an('object');",
+											"        pm.expect(product.category.id).to.be.a('number');",
+											"        pm.expect(product.category.name).to.be.a('string');",
+											"        pm.expect(product.category.slug).to.be.a('string');",
+											"        pm.expect(product.category.image).to.be.a('string');",
+											"        pm.expect(product.category.creationAt).to.be.a('string');",
+											"        pm.expect(product.category.updatedAt).to.be.a('string');",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Price is a non-negative integer\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('array');",
+											"    responseData.forEach(function(product) {",
+											"        pm.expect(product.price).to.be.a('number').and.to.be.at.least(0);",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Images array is present and contains expected number of elements\", function () {",
+											"    const responseData = pm.response.json();",
+											"",
+											"    pm.expect(responseData).to.be.an('array');",
+											"    responseData.forEach(function(product) {",
+											"        pm.expect(product.images).to.exist.and.to.be.an('array');",
+											"        pm.expect(product.images).to.have.lengthOf.at.least(1);",
+											"    });",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/products/",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"products",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "getOne",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/products/120",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"products",
+										"120"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"New Product\",\r\n    \"price\": 10,\r\n    \"description\": \"A description\",\r\n    \"categoryId\": 1,\r\n    \"images\": [\r\n        \"https://placeimg.com/640/480/any\"\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/products/",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"products",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Change title\",\r\n    \"price\": 100,\r\n    \"images\": [\r\n        \"https://placeimg.com/640/480/any\"\r\n    ]\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/products/1",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"products",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "pagination",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response Content-Type is application/json\", function () {",
+											"  pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Validate the product object\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('array').that.is.not.empty;",
+											"    responseData.forEach(function(product) {",
+											"        pm.expect(product).to.be.an('object');",
+											"        pm.expect(product).to.have.property('id').that.is.a('number');",
+											"        pm.expect(product).to.have.property('title').that.is.a('string');",
+											"        pm.expect(product).to.have.property('slug').that.is.a('string');",
+											"        pm.expect(product).to.have.property('price').that.is.a('number');",
+											"        pm.expect(product).to.have.property('description').that.is.a('string');",
+											"        ",
+											"        pm.expect(product.category).to.be.an('object');",
+											"        pm.expect(product.category).to.have.property('id').that.is.a('number');",
+											"        pm.expect(product.category).to.have.property('name').that.is.a('string');",
+											"        pm.expect(product.category).to.have.property('slug').that.is.a('string');",
+											"        pm.expect(product.category).to.have.property('image').that.is.a('string');",
+											"        pm.expect(product.category).to.have.property('creationAt').that.is.a('string');",
+											"        pm.expect(product.category).to.have.property('updatedAt').that.is.a('string');",
+											"        ",
+											"        pm.expect(product).to.have.property('images').that.is.an('array');",
+											"        product.images.forEach(function(image) {",
+											"            pm.expect(image).to.be.a('string');",
+											"        });",
+											"        ",
+											"        pm.expect(product).to.have.property('creationAt').that.is.a('string');",
+											"        pm.expect(product).to.have.property('updatedAt').that.is.a('string');",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Price is a non-negative number\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  responseData.forEach(function(product) {",
+											"    pm.expect(product.price).to.be.a('number');",
+											"    pm.expect(product.price).to.be.at.least(0);",
+											"  });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Images array is present and contains at least one element\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('array');",
+											"  responseData.forEach(function(product) {",
+											"    pm.expect(product.images).to.exist.and.to.be.an('array').and.to.have.lengthOf.at.least(1, \"Images array should not be empty\");",
+											"  });",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/products/?offset=0&limit=10",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"products",
+										""
+									],
+									"query": [
+										{
+											"key": "offset",
+											"value": "0"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "categories",
+					"item": [
+						{
+							"name": "getAll",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 200\", function () {",
+											"  pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response has the required fields\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('array');",
+											"  responseData.forEach(item => {",
+											"    pm.expect(item).to.have.property('id');",
+											"    pm.expect(item).to.have.property('name');",
+											"    pm.expect(item).to.have.property('slug');",
+											"    pm.expect(item).to.have.property('image');",
+											"    pm.expect(item).to.have.property('creationAt');",
+											"    pm.expect(item).to.have.property('updatedAt');",
+											"  });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Name, slug, and image are non-empty strings\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    responseData.forEach(function(category) {",
+											"        pm.expect(category).to.be.an('object');",
+											"        pm.expect(category.name).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Name should not be empty\");",
+											"        pm.expect(category.slug).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Slug should not be empty\");",
+											"        pm.expect(category.image).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Image should not be empty\");",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"CreationAt and UpdatedAt have valid date format\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    responseData.forEach(function(category) {",
+											"        pm.expect(category.creationAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"CreationAt should have valid date format\");",
+											"        pm.expect(category.updatedAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"UpdatedAt should have valid date format\");",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Content-Type header is application/json\", function () {",
+											"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/categories/",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"categories",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "getOne",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response has the required fields\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData).to.have.property('id');",
+											"    pm.expect(responseData).to.have.property('name');",
+											"    pm.expect(responseData).to.have.property('slug');",
+											"    pm.expect(responseData).to.have.property('image');",
+											"    pm.expect(responseData).to.have.property('creationAt');",
+											"    pm.expect(responseData).to.have.property('updatedAt');",
+											"});",
+											"",
+											"",
+											"pm.test(\"Name should be a non-empty string\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData.name).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Name should not be empty\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Slug is in a valid format\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData.slug).to.match(/^[a-z0-9-]+$/i, \"Slug format should be valid\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Image is a non-empty string\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  pm.expect(responseData.image).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Image should not be empty\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"CreationAt and updatedAt are in valid date format\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  ",
+											"  if (responseData.creationAt) {",
+											"    pm.expect(responseData.creationAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"CreationAt should be in valid date format\");",
+											"  }",
+											"  ",
+											"  if (responseData.updatedAt) {",
+											"    pm.expect(responseData.updatedAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"UpdatedAt should be in valid date format\");",
+											"  }",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/categories/1",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"categories",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Content-Type header is application/json\", function () {",
+											"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Id is a non-negative integer\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData.id).to.be.a('number').and.to.satisfy((id) => id >= 0, \"Id should be a non-negative integer\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Name is a non-empty string\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  pm.expect(responseData.name).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Name should not be empty\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"CreationAt and updatedAt are in a valid date format\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData.creationAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"CreationAt is not in valid date format\");",
+											"    pm.expect(responseData.updatedAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"updatedAt is not in valid date format\");",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"name\": \"nuevo\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/categories/1",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"categories",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 201\", function () {",
+											"    pm.expect(pm.response.code).to.equal(201);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response has the required fields\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  pm.expect(responseData).to.have.property('id');",
+											"  pm.expect(responseData).to.have.property('name');",
+											"  pm.expect(responseData).to.have.property('slug');",
+											"  pm.expect(responseData).to.have.property('image');",
+											"  pm.expect(responseData).to.have.property('creationAt');",
+											"  pm.expect(responseData).to.have.property('updatedAt');",
+											"});",
+											"",
+											"",
+											"pm.test(\"Name is a non-empty string\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  pm.expect(responseData.name).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Name should not be empty\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"CreationAt and UpdatedAt have valid date format\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  ",
+											"  if (responseData.creationAt) {",
+											"    pm.expect(responseData.creationAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"Invalid date format for creationAt\");",
+											"  }",
+											"  ",
+											"  if (responseData.updatedAt) {",
+											"    pm.expect(responseData.updatedAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"Invalid date format for updatedAt\");",
+											"  }",
+											"});",
+											"",
+											"",
+											"pm.test(\"Image is a valid URL\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData.image).to.match(/^https?:\\/\\/\\S+/);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"name\": \"Books\",\r\n  \"image\": \"https://api.lorem.space/image/book?w=150&h=220\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/categories/",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"categories",
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "users",
+					"item": [
+						{
+							"name": "getAll",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Content-Type header is application/json\", function () {",
+											"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Validate the user object\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('array').that.is.not.empty;",
+											"    responseData.forEach(function(user) {",
+											"        pm.expect(user).to.be.an('object');",
+											"        pm.expect(user).to.have.property('id');",
+											"        pm.expect(user).to.have.property('email');",
+											"        pm.expect(user).to.have.property('password');",
+											"        pm.expect(user).to.have.property('name');",
+											"        pm.expect(user).to.have.property('role');",
+											"        pm.expect(user).to.have.property('avatar');",
+											"        pm.expect(user).to.have.property('creationAt');",
+											"        pm.expect(user).to.have.property('updatedAt');",
+											"    });",
+											"});",
+											"",
+											"",
+											"pm.test(\"Email is in a valid format\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  responseData.forEach(function(user) {",
+											"    pm.expect(user.email).to.match(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/);",
+											"  });",
+											"});",
+											"",
+											"",
+											"pm.test(\"CreationAt and UpdatedAt are in valid date format\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    responseData.forEach(function(user) {",
+											"        pm.expect(user.creationAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/, \"CreationAt should be in valid date format\");",
+											"        pm.expect(user.updatedAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/, \"UpdatedAt should be in valid date format\");",
+											"    });",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/users/",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "getOne",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 200\", function () {",
+											"    pm.expect(pm.response.code).to.equal(200);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Content-Type is application/json\", function () {",
+											"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Validate the user object\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  pm.expect(responseData.id).to.exist.and.to.be.a('number');",
+											"  pm.expect(responseData.email).to.exist.and.to.be.a('string');",
+											"  pm.expect(responseData.password).to.exist.and.to.be.a('string');",
+											"  pm.expect(responseData.name).to.exist.and.to.be.a('string');",
+											"  pm.expect(responseData.role).to.exist.and.to.be.a('string');",
+											"  pm.expect(responseData.avatar).to.exist.and.to.be.a('string');",
+											"  pm.expect(responseData.creationAt).to.exist.and.to.be.a('string');",
+											"  pm.expect(responseData.updatedAt).to.exist.and.to.be.a('string');",
+											"});",
+											"",
+											"",
+											"pm.test(\"Email is in a valid format\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData.email).to.match(/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/, \"Email should be in a valid format\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"CreationAt and updatedAt are in a valid date format\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.be.an('object');",
+											"    pm.expect(responseData.creationAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"CreationAt should be in valid date format\");",
+											"    pm.expect(responseData.updatedAt).to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.\\d{3}Z$/, \"UpdatedAt should be in valid date format\");",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/users/1",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"name\": \"Nicolas\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/users/1",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"1"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "create",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"name\": \"Nicolas\",\r\n\t\"email\": \"nico@gmail.com\",\r\n\t\"password\": \"123\",\r\n    \"avatar\": \"https://api.lorem.space/image/face?w=640&h=480\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/users/",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "isAvailable",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 201\", function () {",
+											"    pm.expect(pm.response.code).to.equal(201);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response has the required field 'isAvailable'\", function () {",
+											"    const responseData = pm.response.json();",
+											"    ",
+											"    pm.expect(responseData).to.have.property('isAvailable');",
+											"});",
+											"",
+											"",
+											"pm.test(\"IsAvailable field is a boolean value\", function () {",
+											"  const responseData = pm.response.json();",
+											"",
+											"  pm.expect(responseData.isAvailable).to.be.a('boolean');",
+											"});",
+											"",
+											"",
+											"pm.test(\"Content type is application/json\", function () {",
+											"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response time is less than 200ms\", function () {",
+											"  pm.expect(pm.response.responseTime).to.be.below(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"email\": \"maria@mail.com\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/users/is-available",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"users",
+										"is-available"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "auth",
+					"item": [
+						{
+							"name": "login",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Response status code is 201\", function () {",
+											"    pm.expect(pm.response.code).to.equal(201);",
+											"});",
+											"",
+											"",
+											"pm.test(\"Response has the required fields - access_token and refresh_token\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData).to.be.an('object');",
+											"  pm.expect(responseData.access_token).to.exist;",
+											"  pm.expect(responseData.refresh_token).to.exist;",
+											"});",
+											"",
+											"",
+											"pm.test(\"Access token is a non-empty string\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData.access_token).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Access token should not be empty\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Refresh token is a non-empty string\", function () {",
+											"  const responseData = pm.response.json();",
+											"  ",
+											"  pm.expect(responseData.refresh_token).to.be.a('string').and.to.have.lengthOf.at.least(1, \"Refresh token should not be empty\");",
+											"});",
+											"",
+											"",
+											"pm.test(\"Content-Type header is application/json\", function () {",
+											"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n\t\"email\": \"john@mail.com\",\r\n\t\"password\": \"changeme\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/auth/login",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "profile",
+							"request": {
+								"auth": {
+									"type": "bearer",
+									"bearer": [
+										{
+											"key": "token",
+											"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImpvaG5AbWFpbC5jb20iLCJzdWIiOjEsImlhdCI6MTY0OTg4MTQ2NiwiZXhwIjoxNjQ5ODg1MDY2fQ.yVveqqmu6u3lN2UK0McQcfU9-vh8T6iDb6y-mHPhyzA",
+											"type": "string"
+										}
+									]
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/auth/profile",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"auth",
+										"profile"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "files",
+					"item": [
+						{
+							"name": "upload",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "/C:/Users/nicob/Downloads/Step3-graphic-1.png"
+										}
+									]
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/files/upload",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"files",
+										"upload"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "file",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "file",
+											"type": "file",
+											"src": "/C:/Users/nicob/Downloads/Step3-graphic-1.png"
+										}
+									]
+								},
+								"url": {
+									"raw": "https://api.escuelajs.co/api/v1/files/4c8b.png",
+									"protocol": "https",
+									"host": [
+										"api",
+										"escuelajs",
+										"co"
+									],
+									"path": [
+										"api",
+										"v1",
+										"files",
+										"4c8b.png"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		}
+	]
+}
