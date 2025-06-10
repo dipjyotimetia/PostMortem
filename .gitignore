@@ -1,1 +1,10 @@
 node_modules
+test-output/
+coverage/
+.nyc_output/
+*.log
+.env
+.DS_Store
+dist/
+build/
+tmp/

@@ -1,0 +1,20 @@
+{
+  "name": "Test Environment",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.example.com",
+      "enabled": true
+    },
+    {
+      "key": "apiKey",
+      "value": "test-api-key",
+      "enabled": true
+    },
+    {
+      "key": "timeout",
+      "value": "5000",
+      "enabled": true
+    }
+  ]
+}
