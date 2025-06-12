@@ -212,7 +212,7 @@ export class ProjectGenerator {
    */
   private static async _generateReadme(outputDir: string, projectName: string): Promise<void> {
     const readme = `# ${projectName} - API Test Framework\n\n` +
-      'This is an automatically generated API test framework created with PostMorterm.\n\n' +
+      'This is an automatically generated API test framework created with postmortem.\n\n' +
       '## Quick Start\n\n' +
       '1. Install dependencies:\n```bash\nnpm install\n```\n\n' +
       '2. Update .env with your API configuration\n\n' +
@@ -580,7 +580,7 @@ export const api = new ApiClient({
   baseURL: BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
-    'User-Agent': 'PostMorterm-API-Tests/1.0.0'
+    'User-Agent': 'postmortem-API-Tests/1.0.0'
   }
 });
 

@@ -1,13 +1,13 @@
-# Contributing to PostMorterm
+# Contributing to postmortem
 
-Thank you for your interest in contributing to PostMorterm! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to postmortem! This document provides guidelines and information for contributors.
 
 ## Development Setup
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/yourusername/PostMorterm.git
-   cd PostMorterm
+   git clone https://github.com/yourusername/postmortem.git
+   cd postmortem
    ```
 
 2. **Install dependencies**
@@ -121,7 +121,7 @@ npm run format         # Format code with Prettier
 
 When reporting bugs, please include:
 - Node.js version
-- PostMorterm version
+- postmortem version
 - Steps to reproduce
 - Expected vs actual behavior
 - Sample Postman collection (if possible)

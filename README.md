@@ -1,12 +1,12 @@
-# PostMorterm
+# postmortem
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen.svg)](https://nodejs.org/)
-[![npm version](https://badge.fury.io/js/postmorterm.svg)](https://badge.fury.io/js/postmorterm)
+[![npm version](https://badge.fury.io/js/postmortem.svg)](https://badge.fury.io/js/postmortem)
 
 ## Convert Postman Collections to Mocha/Supertest Tests
 
-PostMorterm is a powerful and efficient tool designed to streamline API testing by converting Postman collections into Mocha and Supertest test scripts. By automating the transformation process, this tool empowers engineers to create robust, reliable, and reusable test suites for their APIs with minimal effort.
+postmortem is a powerful and efficient tool designed to streamline API testing by converting Postman collections into Mocha and Supertest test scripts. By automating the transformation process, this tool empowers engineers to create robust, reliable, and reusable test suites for their APIs with minimal effort.
 
 ## Features
 
@@ -23,12 +23,12 @@ PostMorterm is a powerful and efficient tool designed to streamline API testing 
 
 ### Global Installation
 ```bash
-npm install -g postmorterm
+npm install -g postmortem
 ```
 
 ### Local Installation  
 ```bash
-npm install --save-dev postmorterm
+npm install --save-dev postmortem
 ```
 
 ## Usage
@@ -36,23 +36,23 @@ npm install --save-dev postmorterm
 ### Command Line Interface
 
 ```bash
-postmorterm -c ./my-collection.json -o ./test-output -e ./environment.json
+postmortem -c ./my-collection.json -o ./test-output -e ./environment.json
 ```
 
 ### Advanced Usage
 
 ```bash
 # Generate tests with flat structure (no folders)
-postmorterm -c ./collection.json -o ./tests --flat
+postmortem -c ./collection.json -o ./tests --flat
 
 # Skip creating setup.js file
-postmorterm -c ./collection.json -o ./tests --no-setup
+postmortem -c ./collection.json -o ./tests --no-setup
 
 # Enable debug logging
-postmorterm -c ./collection.json -o ./tests --debug
+postmortem -c ./collection.json -o ./tests --debug
 
 # Silent mode (only errors)
-postmorterm -c ./collection.json -o ./tests --silent
+postmortem -c ./collection.json -o ./tests --silent
 ```
 
 ### Options
@@ -70,7 +70,7 @@ postmorterm -c ./collection.json -o ./tests --silent
 ### Programmatic Usage
 
 ```javascript
-const { PostmanConverter } = require('postmorterm');
+const { PostmanConverter } = require('postmortem');
 
 const converter = new PostmanConverter({
   createSetupFile: true,
@@ -91,10 +91,10 @@ console.log(`Generated ${results.testFiles} test files`);
 
 ### TypeScript Support
 
-PostMorterm is written in TypeScript and provides full type definitions for better developer experience:
+postmortem is written in TypeScript and provides full type definitions for better developer experience:
 
 ```typescript
-import { PostmanConverter, ProcessingResults } from 'postmorterm';
+import { PostmanConverter, ProcessingResults } from 'postmortem';
 
 const converter = new PostmanConverter({
   createSetupFile: true,
@@ -116,7 +116,7 @@ Add to your package.json:
 ```json
 {
   "scripts": {
-    "generate-tests": "postmorterm -c ./postman/collection.json -o ./tests"
+    "generate-tests": "postmortem -c ./postman/collection.json -o ./tests"
   }
 }
 ```
@@ -128,7 +128,7 @@ npm run generate-tests
 
 ## How It Works
 
-PostMorterm utilizes the [postman-collection](https://github.com/postmanlabs/postman-collection) SDK to parse Postman collections and transform them into Mocha/Chai/Supertest tests by:
+postmortem utilizes the [postman-collection](https://github.com/postmanlabs/postman-collection) SDK to parse Postman collections and transform them into Mocha/Chai/Supertest tests by:
 
 1. **Reading** the Postman collection structure and validating input
 2. **Parsing** requests, tests, and folder organization  
@@ -138,7 +138,7 @@ PostMorterm utilizes the [postman-collection](https://github.com/postmanlabs/pos
 
 ## Generated Test Structure
 
-For each request in your Postman collection, PostMorterm generates:
+For each request in your Postman collection, postmortem generates:
 
 - **Mocha test files** with the request details and proper imports
 - **Test assertions** converted from Postman's syntax to Chai
@@ -202,7 +202,7 @@ module.exports = { request, expect };
 ## Project Structure
 
 ```
-postmorterm/
+postmortem/
 ├── collection/             # Example Postman collections
 │   └── Platzi_postman_collection.json
 ├── src/                    # TypeScript source files
@@ -227,7 +227,7 @@ postmorterm/
 
 ## Testing & Quality
 
-PostMorterm includes a comprehensive test suite ensuring reliability and code quality:
+postmortem includes a comprehensive test suite ensuring reliability and code quality:
 
 ### Test Coverage
 - **Unit Tests**: Test individual functions and modules

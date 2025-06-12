@@ -361,7 +361,7 @@ export const api = new ApiClient({
   baseURL: BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
-    'User-Agent': 'PostMorterm-API-Tests/1.0.0'
+    'User-Agent': 'postmortem-API-Tests/1.0.0'
   }
 });
 

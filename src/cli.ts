@@ -8,7 +8,7 @@ import { Validator, CLIOptions } from './utils/validator';
 import { PostmanConverter } from './postman-converter';
 
 /**
- * CLI application for PostMorterm
+ * CLI application for postmortem
  */
 class CLI {
   private program: Command;
@@ -20,7 +20,7 @@ class CLI {
 
   private setupCommands(): void {
     this.program
-      .name('postmorterm')
+      .name('postmortem')
       .description('Convert Postman collections to Mocha/Supertest tests')
       .version('1.1.0')
       .requiredOption('-c, --collection <path>', 'Path to Postman collection JSON file')
