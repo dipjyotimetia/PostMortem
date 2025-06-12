@@ -1,15 +1,15 @@
-const _ = require('lodash');
+import * as _ from 'lodash';
 
 /**
  * Converts Postman test scripts to Mocha/Chai assertions
  */
-class TestConverter {
+export class TestConverter {
   /**
    * Convert Postman test script to Mocha assertions
-   * @param {string} postmanScript - The Postman test script content
-   * @returns {string} - Equivalent test assertions in Chai syntax
+   * @param postmanScript - The Postman test script content
+   * @returns Equivalent test assertions in Chai syntax
    */
-  static convertPostmanTestToMocha(postmanScript) {
+  static convertPostmanTestToMocha(postmanScript: string | null | undefined): string {
     if (!postmanScript || typeof postmanScript !== 'string') {
       return '';
     }
@@ -78,14 +78,14 @@ class TestConverter {
 
   /**
    * Extract test name from Postman test script
-   * @param {string} postmanScript - The Postman test script
-   * @returns {string[]} - Array of test names
+   * @param postmanScript - The Postman test script
+   * @returns Array of test names
    */
-  static extractTestNames(postmanScript) {
+  static extractTestNames(postmanScript: string | null | undefined): string[] {
     if (!postmanScript) return [];
     
     const testNamePattern = /pm\.test\s*\(\s*["']([^"']+)["']/g;
-    const matches = [];
+    const matches: string[] = [];
     let match;
     
     while ((match = testNamePattern.exec(postmanScript)) !== null) {
@@ -97,10 +97,10 @@ class TestConverter {
 
   /**
    * Check if script contains any assertions
-   * @param {string} postmanScript - The Postman test script
-   * @returns {boolean} - True if script has assertions
+   * @param postmanScript - The Postman test script
+   * @returns True if script has assertions
    */
-  static hasAssertions(postmanScript) {
+  static hasAssertions(postmanScript: string | null | undefined): boolean {
     if (!postmanScript) return false;
     
     const assertionPatterns = [
@@ -113,4 +113,4 @@ class TestConverter {
   }
 }
 
-module.exports = TestConverter;
+export default TestConverter;

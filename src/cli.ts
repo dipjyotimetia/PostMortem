@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 
-const path = require('path');
-const { Command } = require('commander');
-const { logger } = require('./utils/logger');
-const FileSystem = require('./utils/filesystem');
-const Validator = require('./utils/validator');
-const PostmanConverter = require('./postman-converter');
+import * as path from 'path';
+import { Command } from 'commander';
+import { logger } from './utils/logger';
+import { FileSystem } from './utils/filesystem';
+import { Validator, CLIOptions } from './utils/validator';
+import { PostmanConverter } from './postman-converter';
 
 /**
  * CLI application for PostMorterm
  */
 class CLI {
+  private program: Command;
+
   constructor() {
     this.program = new Command();
     this.setupCommands();
   }
 
-  setupCommands() {
+  private setupCommands(): void {
     this.program
       .name('postmorterm')
       .description('Convert Postman collections to Mocha/Supertest tests')
@@ -30,10 +32,10 @@ class CLI {
       .option('--silent', 'Suppress all output except errors', false);
   }
 
-  async run() {
+  async run(): Promise<void> {
     try {
       this.program.parse();
-      const options = this.program.opts();
+      const options = this.program.opts() as CLIOptions & { setup: boolean };
       
       // Configure logger
       if (options.debug) {
@@ -51,21 +53,40 @@ class CLI {
         validation.errors.forEach(error => logger.error(error));
         process.exit(1);
       }
-      
-      validation.warnings.forEach(warning => logger.warn(warning));
 
-      // Read collection file
-      logger.info(`Reading collection file: ${options.collection}`);
-      const collectionJson = await FileSystem.readJsonFile(options.collection);
-      
-      // Read environment file if provided
+      if (validation.warnings.length > 0) {
+        validation.warnings.forEach(warning => logger.warn(warning));
+      }
+
+      // Resolve paths
+      const collectionPath = path.resolve(options.collection!);
+      const outputPath = path.resolve(options.output || './test');
+      const environmentPath = options.environment ? path.resolve(options.environment) : null;
+
+      logger.info(`Collection: ${collectionPath}`);
+      logger.info(`Output: ${outputPath}`);
+      if (environmentPath) {
+        logger.info(`Environment: ${environmentPath}`);
+      }
+
+      // Read collection
+      let collectionJson;
+      try {
+        collectionJson = await FileSystem.readJsonFile(collectionPath);
+        logger.debug('Collection file read successfully');
+      } catch (error) {
+        logger.error(`Failed to read collection file: ${(error as Error).message}`);
+        process.exit(1);
+      }
+
+      // Read environment if provided
       let environmentJson = null;
-      if (options.environment) {
+      if (environmentPath) {
         try {
-          logger.info(`Reading environment file: ${options.environment}`);
-          environmentJson = await FileSystem.readJsonFile(options.environment);
+          environmentJson = await FileSystem.readJsonFile(environmentPath);
+          logger.debug('Environment file read successfully');
         } catch (error) {
-          logger.warn(`Failed to read environment file: ${error.message}`);
+          logger.warn(`Failed to read environment file: ${(error as Error).message}`);
         }
       }
       
@@ -79,7 +100,7 @@ class CLI {
       // Process the collection
       const results = await converter.processCollection(
         collectionJson, 
-        options.output, 
+        options.output || './test', 
         environmentJson
       );
       
@@ -91,13 +112,13 @@ class CLI {
       logger.info(`🌐 Base URL: ${results.baseUrl}`);
       
       if (results.environment && Object.keys(results.environment).length > 0) {
-        logger.info(`⚙️  Environment variables: ${Object.keys(results.environment).length}`);
+        logger.info(`🌍 Environment variables: ${Object.keys(results.environment).length}`);
       }
       
     } catch (error) {
-      logger.error(`❌ ${error.message}`);
-      if (this.program.opts().debug) {
-        logger.error(error.stack);
+      logger.error(`Conversion failed: ${(error as Error).message}`);
+      if (process.env.DEBUG) {
+        console.error((error as Error).stack);
       }
       process.exit(1);
     }
@@ -108,9 +129,10 @@ class CLI {
 if (require.main === module) {
   const cli = new CLI();
   cli.run().catch(error => {
-    logger.error(`Unhandled error: ${error.message}`);
+    console.error('Fatal error:', error);
     process.exit(1);
   });
 }
 
-module.exports = CLI;
+export { CLI };
+export default CLI;

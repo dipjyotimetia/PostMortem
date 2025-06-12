@@ -1,18 +1,62 @@
-const _ = require('lodash');
-const TestConverter = require('./test-converter');
+import * as _ from 'lodash';
+import { TestConverter } from './test-converter';
+
+export interface PostmanRequest {
+  method?: string;
+  url?: any;
+  body?: {
+    mode?: string;
+    raw?: string;
+  };
+  header?: Array<{
+    key?: string;
+    value?: string;
+    disabled?: boolean;
+  }>;
+}
+
+export interface PostmanEvent {
+  listen?: string;
+  script?: {
+    exec?: string[];
+  };
+}
+
+export interface PostmanItem {
+  name: string;
+  request?: PostmanRequest;
+  events?: PostmanEvent[];
+}
+
+export interface GenerationOptions {
+  [key: string]: any;
+}
+
+export interface UrlInfo {
+  url: string;
+  pathname: string;
+}
+
+export interface EnvironmentVariables {
+  [key: string]: string;
+}
 
 /**
  * Generates Mocha test files from Postman requests
  */
-class TestGenerator {
+export class TestGenerator {
   /**
    * Generate a Mocha test file from a Postman request
-   * @param {Object} item - The Postman request item
-   * @param {string} parentName - The name of the parent folder
-   * @param {Object} options - Generation options
-   * @returns {string} - The generated Mocha test code
+   * @param item - The Postman request item
+   * @param parentName - The name of the parent folder
+   * @param options - Generation options
+   * @returns The generated Mocha test code
    */
-  static generateMochaTestFromRequest(item, parentName = '', options = {}) {
+  static generateMochaTestFromRequest(
+    item: PostmanItem, 
+    parentName: string = '', 
+    options: GenerationOptions = {}
+  ): string {
     if (!item?.name) {
       throw new Error('Request item must have a name');
     }
@@ -49,7 +93,7 @@ describe('${testName}', function() {
    * Extract URL information from request
    * @private
    */
-  static _extractUrl(requestUrl, itemName) {
+  private static _extractUrl(requestUrl: any, itemName: string): UrlInfo {
     let url = '';
     let pathname = '/';
     
@@ -73,7 +117,7 @@ describe('${testName}', function() {
    * Extract request body
    * @private
    */
-  static _extractRequestBody(requestBody) {
+  private static _extractRequestBody(requestBody?: PostmanRequest['body']): any {
     if (!requestBody || requestBody.mode !== 'raw' || !requestBody.raw) {
       return null;
     }
@@ -89,7 +133,7 @@ describe('${testName}', function() {
    * Extract headers
    * @private
    */
-  static _extractHeaders(requestHeaders) {
+  private static _extractHeaders(requestHeaders?: PostmanRequest['header']): Record<string, string> {
     if (!requestHeaders || !Array.isArray(requestHeaders)) {
       return {};
     }
@@ -99,14 +143,14 @@ describe('${testName}', function() {
         acc[header.key] = header.value;
       }
       return acc;
-    }, {});
+    }, {} as Record<string, string>);
   }
 
   /**
    * Extract test script from events
    * @private
    */
-  static _extractTestScript(events) {
+  private static _extractTestScript(events?: PostmanEvent[]): string {
     if (!events || !Array.isArray(events)) {
       return '';
     }
@@ -119,7 +163,12 @@ describe('${testName}', function() {
    * Generate request code based on method and parameters
    * @private
    */
-  static _generateRequestCode(method, pathname, body, headers) {
+  private static _generateRequestCode(
+    method: string, 
+    pathname: string, 
+    body: any, 
+    headers: Record<string, string>
+  ): string {
     let code = `const response = await request.${method}('${pathname}')`;
     
     // Add headers if any
@@ -144,11 +193,11 @@ describe('${testName}', function() {
 
   /**
    * Generate setup file content
-   * @param {string} baseUrl - Base URL for the API
-   * @param {Object} environment - Environment variables
-   * @returns {string} - Setup file content
+   * @param baseUrl - Base URL for the API
+   * @param environment - Environment variables
+   * @returns Setup file content
    */
-  static generateSetupFile(baseUrl, environment = null) {
+  static generateSetupFile(baseUrl: string, environment: EnvironmentVariables | null = null): string {
     const envVars = environment ? JSON.stringify(environment, null, 2) : 'null';
     
     return `const supertest = require('supertest');
@@ -175,4 +224,4 @@ module.exports = {
   }
 }
 
-module.exports = TestGenerator;
+export default TestGenerator;

@@ -1,16 +1,16 @@
-const fs = require('fs-extra');
-const path = require('path');
+import * as fs from 'fs-extra';
+import * as path from 'path';
 
 /**
  * File system utilities with better error handling
  */
-class FileSystem {
+export class FileSystem {
   /**
    * Read and parse JSON file safely
-   * @param {string} filePath - Path to JSON file
-   * @returns {Promise<Object>} - Parsed JSON object
+   * @param filePath - Path to JSON file
+   * @returns Parsed JSON object
    */
-  static async readJsonFile(filePath) {
+  static async readJsonFile(filePath: string): Promise<any> {
     try {
       const absolutePath = path.resolve(filePath);
       const exists = await fs.pathExists(absolutePath);
@@ -31,50 +31,47 @@ class FileSystem {
 
   /**
    * Write content to file safely
-   * @param {string} filePath - Path to write to
-   * @param {string} content - Content to write
-   * @returns {Promise<void>}
+   * @param filePath - Path to write to
+   * @param content - Content to write
    */
-  static async writeFile(filePath, content) {
+  static async writeFile(filePath: string, content: string): Promise<void> {
     try {
       await fs.ensureDir(path.dirname(filePath));
       await fs.writeFile(filePath, content, 'utf8');
     } catch (error) {
-      throw new Error(`Failed to write file ${filePath}: ${error.message}`);
+      throw new Error(`Failed to write file ${filePath}: ${(error as Error).message}`);
     }
   }
 
   /**
    * Ensure directory exists
-   * @param {string} dirPath - Directory path
-   * @returns {Promise<void>}
+   * @param dirPath - Directory path
    */
-  static async ensureDir(dirPath) {
+  static async ensureDir(dirPath: string): Promise<void> {
     try {
       await fs.ensureDir(dirPath);
     } catch (error) {
-      throw new Error(`Failed to create directory ${dirPath}: ${error.message}`);
+      throw new Error(`Failed to create directory ${dirPath}: ${(error as Error).message}`);
     }
   }
 
   /**
    * Check if file exists
-   * @param {string} filePath - File path to check
-   * @returns {Promise<boolean>}
+   * @param filePath - File path to check
    */
-  static async exists(filePath) {
+  static async exists(filePath: string): Promise<boolean> {
     return fs.pathExists(filePath);
   }
 
   /**
    * Get relative path between two paths
-   * @param {string} from - From path
-   * @param {string} to - To path
-   * @returns {string} - Relative path
+   * @param from - From path
+   * @param to - To path
+   * @returns Relative path
    */
-  static getRelativePath(from, to) {
+  static getRelativePath(from: string, to: string): string {
     return path.relative(from, to).replace(/\\/g, '/');
   }
 }
 
-module.exports = FileSystem;
+export default FileSystem;

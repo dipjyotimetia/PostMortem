@@ -16,7 +16,7 @@ PostMorterm is a powerful and efficient tool designed to streamline API testing 
 - **Full Assertion Support**: Properly converts Postman test scripts to equivalent Chai assertions
 - **Flexible Configuration**: Customize output directory and other options via CLI
 - **Comprehensive API Support**: Handles all REST methods, headers, query parameters, and JSON bodies
-- **TypeScript Ready**: Well-structured codebase with comprehensive testing
+- **TypeScript Ready**: Built with TypeScript for better type safety and developer experience
 - **Modern Architecture**: Built with ES2022+ features and best practices
 
 ## Installation
@@ -88,6 +88,27 @@ const results = await converter.processCollection(
 
 console.log(`Generated ${results.testFiles} test files`);
 ```
+
+### TypeScript Support
+
+PostMorterm is written in TypeScript and provides full type definitions for better developer experience:
+
+```typescript
+import { PostmanConverter, ProcessingResults } from 'postmorterm';
+
+const converter = new PostmanConverter({
+  createSetupFile: true,
+  maintainFolderStructure: true
+});
+
+const results: ProcessingResults = await converter.processCollection(
+  collection, 
+  './test-output', 
+  environment
+);
+```
+
+The library exports comprehensive type definitions for all interfaces and options.
 
 ### Quick Start with NPM Script
 
@@ -184,17 +205,18 @@ module.exports = { request, expect };
 postmorterm/
 ├── collection/             # Example Postman collections
 │   └── Platzi_postman_collection.json
-├── src/
-│   ├── cli.js              # Command-line interface
-│   ├── index.js            # Main library entry point
-│   ├── postman-converter.js # Core conversion logic
+├── src/                    # TypeScript source files
+│   ├── cli.ts              # Command-line interface
+│   ├── index.ts            # Main library entry point
+│   ├── postman-converter.ts # Core conversion logic
 │   ├── converters/         # Conversion utilities
-│   │   ├── test-converter.js
-│   │   └── test-generator.js
+│   │   ├── test-converter.ts
+│   │   └── test-generator.ts
 │   └── utils/              # Utility modules
-│       ├── logger.js
-│       ├── filesystem.js
-│       └── validator.js
+│       ├── logger.ts
+│       ├── filesystem.ts
+│       └── validator.ts
+├── dist/                   # Compiled JavaScript (generated)
 ├── tests/                  # Comprehensive test suite
 │   ├── unit/              # Unit tests
 │   ├── integration/       # Integration tests
@@ -241,4 +263,22 @@ npm run lint:fix
 
 # Format code
 npm run format
+```
+
+### Development with TypeScript
+```bash
+# Build TypeScript to JavaScript
+npm run build
+
+# Build in watch mode (rebuilds on changes)
+npm run build:watch
+
+# Clean build artifacts
+npm run clean
+
+# Run TypeScript directly (development)
+npm run dev
+
+# Build and run tests
+npm test
 ```

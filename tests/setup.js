@@ -14,11 +14,13 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Clean up environment
-beforeEach(function() {
-  // Reset any environment variables that might affect tests
-  delete process.env.DEBUG;
-  delete process.env.LOG_LEVEL;
-  delete process.env.API_BASE_URL;
-  delete process.env.TEST_TIMEOUT;
-});
+// Export for tests that need it
+module.exports = {
+  setupTest: function() {
+    // Reset any environment variables that might affect tests
+    delete process.env.DEBUG;
+    delete process.env.LOG_LEVEL;
+    delete process.env.API_BASE_URL;
+    delete process.env.TEST_TIMEOUT;
+  }
+};

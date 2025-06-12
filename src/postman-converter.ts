@@ -1,16 +1,36 @@
-const sdk = require('postman-collection');
-const path = require('path');
-const _ = require('lodash');
-const { logger } = require('./utils/logger');
-const FileSystem = require('./utils/filesystem');
-const Validator = require('./utils/validator');
-const TestGenerator = require('./converters/test-generator');
+import * as sdk from 'postman-collection';
+import * as path from 'path';
+import * as _ from 'lodash';
+import { logger } from './utils/logger';
+import { FileSystem } from './utils/filesystem';
+import { Validator, PostmanCollection, PostmanEnvironment } from './utils/validator';
+import { TestGenerator, EnvironmentVariables } from './converters/test-generator';
+
+export interface PostmanConverterOptions {
+  outputDir?: string;
+  createSetupFile?: boolean;
+  maintainFolderStructure?: boolean;
+}
+
+export interface ProcessingResults {
+  testFiles: number;
+  folders: number;
+  baseUrl: string;
+  environment: EnvironmentVariables | null;
+}
+
+export interface InternalProcessingResults {
+  testFiles: number;
+  folders: number;
+}
 
 /**
  * Main converter class for processing Postman collections
  */
-class PostmanConverter {
-  constructor(options = {}) {
+export class PostmanConverter {
+  private options: Required<PostmanConverterOptions>;
+
+  constructor(options: PostmanConverterOptions = {}) {
     this.options = {
       outputDir: './test',
       createSetupFile: true,
@@ -21,12 +41,16 @@ class PostmanConverter {
 
   /**
    * Process a Postman collection and generate Mocha test files
-   * @param {Object} rawCollection - The raw Postman collection object
-   * @param {string} outputDir - The directory where test files will be created
-   * @param {Object} rawEnvironment - Optional raw Postman environment variables
-   * @returns {Promise<Object>} - Processing results
+   * @param rawCollection - The raw Postman collection object
+   * @param outputDir - The directory where test files will be created
+   * @param rawEnvironment - Optional raw Postman environment variables
+   * @returns Processing results
    */
-  async processCollection(rawCollection, outputDir, rawEnvironment = null) {
+  async processCollection(
+    rawCollection: PostmanCollection, 
+    outputDir: string, 
+    rawEnvironment: PostmanEnvironment | null = null
+  ): Promise<ProcessingResults> {
     logger.info(`Processing collection: "${rawCollection.info?.name || 'Unnamed Collection'}"`);
     
     // Validate inputs
@@ -54,7 +78,8 @@ class PostmanConverter {
     const environment = rawEnvironment ? new sdk.VariableScope(rawEnvironment) : null;
     
     if (environment) {
-      logger.info(`Found environment with ${environment.values?.members?.length || 0} variables`);
+      const envValues = environment.values as any;
+      logger.info(`Found environment with ${envValues?.members?.length || 0} variables`);
     }
 
     // Ensure output directory exists
@@ -87,14 +112,16 @@ class PostmanConverter {
    * Extract base URL from collection
    * @private
    */
-  _extractBaseUrl(collection) {
-    if (!collection?.items?.members?.length) {
+  private _extractBaseUrl(collection: sdk.Collection): string {
+    const items = collection.items as any;
+    if (!items?.members?.length) {
       logger.warn('Collection has no items, using default base URL');
       return 'https://api.example.com';
     }
 
-    const findFirstUrl = (itemGroup) => {
-      for (const item of itemGroup.items.members) {
+    const findFirstUrl = (itemGroup: any): string | null => {
+      const members = itemGroup.items?.members || itemGroup.items?.all?.() || [];
+      for (const item of members) {
         if (item.request?.url) {
           try {
             const url = item.request.url.toString();
@@ -127,18 +154,19 @@ class PostmanConverter {
    * Extract environment variables from Postman environment
    * @private
    */
-  _extractEnvironmentVariables(environment) {
-    if (!environment?.values?.members?.length) {
+  private _extractEnvironmentVariables(environment: sdk.VariableScope): EnvironmentVariables {
+    const envValues = environment.values as any;
+    if (!envValues?.members?.length) {
       logger.debug('No environment variables found');
       return {};
     }
     
-    const variables = environment.values.members.reduce((acc, variable) => {
+    const variables = envValues.members.reduce((acc: EnvironmentVariables, variable: any) => {
       if (variable.key && variable.value) {
         acc[variable.key] = variable.value;
       }
       return acc;
-    }, {});
+    }, {} as EnvironmentVariables);
     
     logger.debug(`Extracted ${Object.keys(variables).length} environment variables`);
     return variables;
@@ -148,8 +176,14 @@ class PostmanConverter {
    * Process collection items recursively
    * @private
    */
-  async _processItems(itemGroup, outputDir, parentPath = '', level = 0) {
-    if (!itemGroup?.items?.members) {
+  private async _processItems(
+    itemGroup: any, 
+    outputDir: string, 
+    parentPath: string = '', 
+    level: number = 0
+  ): Promise<InternalProcessingResults> {
+    const items = itemGroup?.items?.members || itemGroup?.items?.all?.() || [];
+    if (!items || items.length === 0) {
       logger.warn(`${' '.repeat(level * 2)}No items found in group`);
       return { testFiles: 0, folders: 0 };
     }
@@ -158,8 +192,9 @@ class PostmanConverter {
     let testFiles = 0;
     let folders = 0;
 
-    for (const item of itemGroup.items.members) {
-      if (item.items && item.items.members.length > 0) {
+    for (const item of items) {
+      const itemItems = item.items?.members || item.items?.all?.() || [];
+      if (item.items && itemItems.length > 0) {
         // This is a folder
         const folderName = _.kebabCase(item.name);
         const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
@@ -196,7 +231,12 @@ class PostmanConverter {
    * Generate a single test file
    * @private
    */
-  async _generateTestFile(item, outputDir, parentPath, indent) {
+  private async _generateTestFile(
+    item: sdk.Item, 
+    outputDir: string, 
+    parentPath: string, 
+    indent: string
+  ): Promise<void> {
     const fileName = `${_.kebabCase(item.name)}.test.js`;
     const filePath = parentPath
       ? path.join(outputDir, parentPath, fileName)
@@ -215,8 +255,8 @@ class PostmanConverter {
       
       // Generate test content
       const parentName = parentPath ? parentPath.split('/').pop() : '';
-      const testContent = TestGenerator.generateMochaTestFromRequest(item, parentName);
-      
+      const testContent = TestGenerator.generateMochaTestFromRequest(item as any, parentName || '');
+
       const fileContent = `const { request, expect } = require('${setupPath}');
 
 ${testContent}`;
@@ -225,10 +265,10 @@ ${testContent}`;
       logger.success(`${indent}Created test file: ${filePath}`);
       
     } catch (error) {
-      logger.error(`${indent}Failed to generate test file for "${item.name}": ${error.message}`);
+      logger.error(`${indent}Failed to generate test file for "${item.name}": ${(error as Error).message}`);
       throw error;
     }
   }
 }
 
-module.exports = PostmanConverter;
+export default PostmanConverter;

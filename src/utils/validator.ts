@@ -1,15 +1,47 @@
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface PostmanCollection {
+  info?: {
+    name?: string;
+    schema?: string;
+  };
+  item?: any[];
+}
+
+export interface PostmanEnvironment {
+  name?: string;
+  values?: Array<{
+    key?: string;
+    value?: string;
+  }>;
+}
+
+export interface CLIOptions {
+  collection?: string;
+  output?: string;
+  environment?: string;
+  debug?: boolean;
+  setup?: boolean;
+  flat?: boolean;
+  silent?: boolean;
+}
+
 /**
  * Validation utilities for Postman collections and environments
  */
-class Validator {
+export class Validator {
   /**
    * Validate Postman collection structure
-   * @param {Object} collection - Raw collection object
-   * @returns {Object} - Validation result
+   * @param collection - Raw collection object
+   * @returns Validation result
    */
-  static validateCollection(collection) {
-    const errors = [];
-    const warnings = [];
+  static validateCollection(collection: PostmanCollection): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
 
     if (!collection) {
       errors.push('Collection is required');
@@ -42,12 +74,12 @@ class Validator {
 
   /**
    * Validate Postman environment structure
-   * @param {Object} environment - Raw environment object
-   * @returns {Object} - Validation result
+   * @param environment - Raw environment object
+   * @returns Validation result
    */
-  static validateEnvironment(environment) {
-    const errors = [];
-    const warnings = [];
+  static validateEnvironment(environment: PostmanEnvironment | null): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
 
     if (!environment) {
       return { isValid: true, errors, warnings }; // Environment is optional
@@ -78,12 +110,12 @@ class Validator {
 
   /**
    * Validate CLI options
-   * @param {Object} options - CLI options
-   * @returns {Object} - Validation result
+   * @param options - CLI options
+   * @returns Validation result
    */
-  static validateOptions(options) {
-    const errors = [];
-    const warnings = [];
+  static validateOptions(options: CLIOptions): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
 
     if (!options.collection) {
       errors.push('Collection path is required');
@@ -101,4 +133,4 @@ class Validator {
   }
 }
 
-module.exports = Validator;
+export default Validator;
