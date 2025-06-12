@@ -200,26 +200,22 @@ describe('${testName}', function() {
   static generateSetupFile(baseUrl: string, environment: EnvironmentVariables | null = null): string {
     const envVars = environment ? JSON.stringify(environment, null, 2) : 'null';
     
-    return `const supertest = require('supertest');
-const { expect } = require('chai');
-require('dotenv').config();
+    return `import supertest from 'supertest';
+import { expect } from 'chai';
+import 'dotenv/config';
 
 // Base URL configuration
 const BASE_URL = process.env.API_BASE_URL || '${baseUrl}';
-const request = supertest(BASE_URL);
+export const request = supertest(BASE_URL);
 
 // Environment variables from Postman
-const env = ${envVars};
+export const env = ${envVars};
 
 // Request timeout configuration
-const DEFAULT_TIMEOUT = process.env.TEST_TIMEOUT || 10000;
+export const DEFAULT_TIMEOUT = process.env.TEST_TIMEOUT || 10000;
 
-module.exports = { 
-  request, 
-  expect,
-  env,
-  DEFAULT_TIMEOUT
-};
+// Re-export expect for convenience
+export { expect };
 `;
   }
 }

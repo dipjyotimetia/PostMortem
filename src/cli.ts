@@ -27,7 +27,7 @@ class CLI {
       .option('-o, --output <directory>', 'Output directory for the generated test files', './test')
       .option('-e, --environment <path>', 'Path to Postman environment JSON file (optional)')
       .option('-d, --debug', 'Enable debug logging', false)
-      .option('--no-setup', 'Skip creating setup.js file', false)
+      .option('--no-setup', 'Skip creating setup.ts file')
       .option('--flat', 'Generate all test files in output directory (ignore folder structure)', false)
       .option('--silent', 'Suppress all output except errors', false);
   }

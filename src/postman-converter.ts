@@ -92,8 +92,8 @@ export class PostmanConverter {
     
     if (this.options.createSetupFile) {
       const setupContent = TestGenerator.generateSetupFile(baseUrl, environmentVars);
-      await FileSystem.writeFile(path.join(outputDir, 'setup.js'), setupContent);
-      logger.success(`Created setup file: ${path.join(outputDir, 'setup.js')}`);
+      await FileSystem.writeFile(path.join(outputDir, 'setup.ts'), setupContent);
+      logger.success(`Created setup file: ${path.join(outputDir, 'setup.ts')}`);
     }
 
     // Process collection items
@@ -237,7 +237,7 @@ export class PostmanConverter {
     parentPath: string, 
     indent: string
   ): Promise<void> {
-    const fileName = `${_.kebabCase(item.name)}.test.js`;
+    const fileName = `${_.kebabCase(item.name)}.test.ts`;
     const filePath = parentPath
       ? path.join(outputDir, parentPath, fileName)
       : path.join(outputDir, fileName);
@@ -246,18 +246,18 @@ export class PostmanConverter {
     
     try {
       // Calculate relative path to setup file
-      let setupPath = './setup.js';
+      let setupPath = './setup.ts';
       if (parentPath) {
         // Count directory levels to calculate relative path
         const levels = parentPath.split('/').length;
-        setupPath = '../'.repeat(levels) + 'setup.js';
+        setupPath = '../'.repeat(levels) + 'setup.ts';
       }
       
       // Generate test content
       const parentName = parentPath ? parentPath.split('/').pop() : '';
       const testContent = TestGenerator.generateMochaTestFromRequest(item as any, parentName || '');
 
-      const fileContent = `const { request, expect } = require('${setupPath}');
+      const fileContent = `import { request, expect } from '${setupPath}';
 
 ${testContent}`;
 
