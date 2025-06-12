@@ -26,6 +26,11 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
+    - name: Commit any changes
+      run: |
+        git add .
+        git diff --staged --quiet || git commit -m "Auto-update dependencies"
+
     - name: Bump version
       run: npm version patch
 
