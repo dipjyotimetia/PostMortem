@@ -1,5 +1,5 @@
 {
-  "name": "postmortem",
+  "name": "@dipjyotimetia/postmortem",
   "version": "1.1.0",
   "description": "Convert Postman collections to Mocha/Supertest tests",
   "main": "dist/index.js",
