@@ -17,13 +17,25 @@ Convert Postman collections to Mocha/Supertest tests automatically.
 ## Installation
 
 ```bash
-npm install -g postmortem
+npm install -g @dipjyotimetia/postmortem
+```
+
+Or install locally:
+
+```bash
+npm install @dipjyotimetia/postmortem
 ```
 
 ## Usage
 
+### Global Installation
 ```bash
 postmortem -c ./my-collection.json -o ./test-output
+```
+
+### Local Installation
+```bash
+npx @dipjyotimetia/postmortem -c ./my-collection.json -o ./test-output
 ```
 
 ### Options
@@ -37,7 +49,7 @@ postmortem -c ./my-collection.json -o ./test-output
 ### Programmatic Usage
 
 ```javascript
-const { PostmanConverter } = require('postmortem');
+const { PostmanConverter } = require('@dipjyotimetia/postmortem');
 
 const converter = new PostmanConverter();
 const collection = require('./my-collection.json');
