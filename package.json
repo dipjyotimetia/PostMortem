@@ -36,6 +36,10 @@
   ],
   "author": "Dipjyoti Metia",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dipjyotimetia/PostMortem"
+  },
   "dependencies": {
     "axios": "^1.9.0",
     "chalk": "^4.1.2",
