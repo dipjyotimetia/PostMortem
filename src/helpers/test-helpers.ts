@@ -22,7 +22,7 @@ export function expectResponseTime(startTime: number, maxTime: number = DEFAULT_
 /**
  * Validates that response has required fields
  */
-export function expectRequiredFields(data: any, fields: string[]): void {
+export function expectRequiredFields(data: unknown, fields: string[]): void {
   expect(data, 'Response data should exist').to.exist;
 
   for (const field of fields) {
@@ -34,7 +34,7 @@ export function expectRequiredFields(data: any, fields: string[]): void {
 /**
  * Validates that response data is an array
  */
-export function expectArray(data: any, minLength: number = 0): void {
+export function expectArray(data: unknown, minLength: number = 0): void {
   expect(data, 'Response data should be an array').to.be.an('array');
   expect(data.length, `Array should have at least ${minLength} items`).to.be.at.least(minLength);
 }
@@ -42,7 +42,7 @@ export function expectArray(data: any, minLength: number = 0): void {
 /**
  * Validates that response data is an object
  */
-export function expectObject(data: any): void {
+export function expectObject(data: unknown): void {
   expect(data, 'Response data should be an object').to.be.an('object');
   expect(data, 'Response data should not be null').to.not.be.null;
 }
@@ -50,14 +50,14 @@ export function expectObject(data: any): void {
 /**
  * Validates that response contains pagination metadata
  */
-export function expectPagination(data: any): void {
+export function expectPagination(data: unknown): void {
   expectObject(data);
 
   const paginationFields = ['page', 'limit', 'total'];
   const hasAnyPaginationField = paginationFields.some(field =>
-    data.hasOwnProperty(field) ||
-    (data.meta && data.meta.hasOwnProperty(field)) ||
-    (data.pagination && data.pagination.hasOwnProperty(field))
+    Object.prototype.hasOwnProperty.call(data, field) ||
+    (data.meta && Object.prototype.hasOwnProperty.call(data.meta, field)) ||
+    (data.pagination && Object.prototype.hasOwnProperty.call(data.pagination, field))
   );
 
   expect(hasAnyPaginationField, 'Response should contain pagination metadata').to.be.true;
@@ -83,7 +83,7 @@ export function expectError(response: ApiResponse, expectedStatus: number[] = [4
 /**
  * Validates that response data matches a schema pattern
  */
-export function expectSchema(data: any, schema: Record<string, string>): void {
+export function expectSchema(data: unknown, schema: Record<string, string>): void {
   expectObject(data);
 
   for (const [field, expectedType] of Object.entries(schema)) {
@@ -107,7 +107,7 @@ export function expectSchema(data: any, schema: Record<string, string>): void {
       expect(actualValue, `Field ${field} should be an object`).to.be.an('object');
       break;
     case 'date':
-      expect(actualValue, `Field ${field} should be a valid date`).to.satisfy((val: any) => {
+      expect(actualValue, `Field ${field} should be a valid date`).to.satisfy((val: unknown) => {
         return !isNaN(Date.parse(val));
       });
       break;
@@ -120,7 +120,7 @@ export function expectSchema(data: any, schema: Record<string, string>): void {
 /**
  * Validates that an ID field is valid
  */
-export function expectValidId(id: any, fieldName: string = 'id'): void {
+export function expectValidId(id: unknown, fieldName: string = 'id'): void {
   expect(id, `${fieldName} should exist`).to.exist;
 
   // Check if it's a valid numeric ID or UUID
@@ -133,15 +133,15 @@ export function expectValidId(id: any, fieldName: string = 'id'): void {
 /**
  * Validates that response contains authentication token
  */
-export function expectAuthToken(data: any): void {
+export function expectAuthToken(data: unknown): void {
   expectObject(data);
 
   const tokenFields = ['token', 'access_token', 'accessToken', 'jwt'];
-  const hasToken = tokenFields.some(field => data.hasOwnProperty(field));
+  const hasToken = tokenFields.some(field => Object.prototype.hasOwnProperty.call(data, field));
 
   expect(hasToken, 'Response should contain authentication token').to.be.true;
 
-  const tokenField = tokenFields.find(field => data.hasOwnProperty(field));
+  const tokenField = tokenFields.find(field => Object.prototype.hasOwnProperty.call(data, field));
   if (tokenField) {
     expect(data[tokenField], 'Token should not be empty').to.be.a('string').and.not.be.empty;
   }
@@ -156,10 +156,10 @@ export function expectCreated(response: ApiResponse): void {
 
   // Check for common ID fields that indicate resource creation
   const idFields = ['id', '_id', 'uuid'];
-  const hasId = idFields.some(field => response.data.hasOwnProperty(field));
+  const hasId = idFields.some(field => Object.prototype.hasOwnProperty.call(response.data, field));
 
   if (hasId) {
-    const idField = idFields.find(field => response.data.hasOwnProperty(field));
+    const idField = idFields.find(field => Object.prototype.hasOwnProperty.call(response.data, field));
     expectValidId(response.data[idField!], idField);
   }
 }

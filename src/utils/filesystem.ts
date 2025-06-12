@@ -10,7 +10,7 @@ export class FileSystem {
    * @param filePath - Path to JSON file
    * @returns Parsed JSON object
    */
-  static async readJsonFile(filePath: string): Promise<any> {
+  static async readJsonFile(filePath: string): Promise<unknown> {
     try {
       const absolutePath = path.resolve(filePath);
       const exists = await fs.pathExists(absolutePath);

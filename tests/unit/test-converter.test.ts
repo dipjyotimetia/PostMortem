@@ -33,8 +33,8 @@ describe('TestConverter', () => {
 
     it('should handle empty or null input', () => {
       expect(TestConverter.convertPostmanTestToMocha('')).to.equal('');
-      expect(TestConverter.convertPostmanTestToMocha(null as any)).to.equal('');
-      expect(TestConverter.convertPostmanTestToMocha(undefined as any)).to.equal('');
+      expect(TestConverter.convertPostmanTestToMocha(null as unknown)).to.equal('');
+      expect(TestConverter.convertPostmanTestToMocha(undefined as unknown)).to.equal('');
     });
 
     it('should convert complex test script', () => {
@@ -72,7 +72,7 @@ pm.test("Second test", function () {});`;
 
     it('should handle empty input', () => {
       expect(TestConverter.extractTestNames('')).to.deep.equal([]);
-      expect(TestConverter.extractTestNames(null as any)).to.deep.equal([]);
+      expect(TestConverter.extractTestNames(null as unknown)).to.deep.equal([]);
     });
   });
 
@@ -95,7 +95,7 @@ pm.test("Second test", function () {});`;
     it('should return false for no assertions', () => {
       expect(TestConverter.hasAssertions('console.log("hello");')).to.be.false;
       expect(TestConverter.hasAssertions('')).to.be.false;
-      expect(TestConverter.hasAssertions(null as any)).to.be.false;
+      expect(TestConverter.hasAssertions(null as unknown)).to.be.false;
     });
   });
 });

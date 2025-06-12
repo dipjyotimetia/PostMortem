@@ -5,7 +5,7 @@ export interface ApiResponse<T = any> {
   data: T;
   status: number;
   statusText: string;
-  headers: any;
+  headers: unknown;
 }
 
 export interface ApiClientConfig {
@@ -79,7 +79,7 @@ export class ApiClient {
   /**
    * POST request
    */
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async post<T = any>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.post<T>(url, data, config);
     return this.transformResponse(response);
   }
@@ -87,7 +87,7 @@ export class ApiClient {
   /**
    * PUT request
    */
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async put<T = any>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.put<T>(url, data, config);
     return this.transformResponse(response);
   }
@@ -95,7 +95,7 @@ export class ApiClient {
   /**
    * PATCH request
    */
-  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async patch<T = any>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
     const response = await this.client.patch<T>(url, data, config);
     return this.transformResponse(response);
   }

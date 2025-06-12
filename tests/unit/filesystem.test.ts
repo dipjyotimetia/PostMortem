@@ -38,8 +38,8 @@ describe('FileSystem', () => {
       try {
         await FileSystem.readJsonFile(filePath);
         expect.fail('Should have thrown error');
-      } catch (error: any) {
-        expect(error.message).to.include('File not found');
+      } catch (error: unknown) {
+        expect((error as Error).message).to.include('File not found');
       }
     });
 
@@ -50,8 +50,8 @@ describe('FileSystem', () => {
       try {
         await FileSystem.readJsonFile(filePath);
         expect.fail('Should have thrown error');
-      } catch (error: any) {
-        expect(error.message).to.include('Invalid JSON');
+      } catch (error: unknown) {
+        expect((error as Error).message).to.include('Invalid JSON');
       }
     });
   });

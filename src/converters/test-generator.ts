@@ -2,7 +2,7 @@ import { TestConverter } from './test-converter';
 
 export interface PostmanRequest {
   method?: string;
-  url?: any;
+  url?: unknown;
   body?: {
     mode?: string;
     raw?: string;
@@ -28,7 +28,7 @@ export interface PostmanItem {
 }
 
 export interface GenerationOptions {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UrlInfo {
@@ -71,7 +71,7 @@ export class TestGenerator {
     const method = (request.method || 'GET').toLowerCase();
     const { pathname } = this._extractUrl(request.url, item.name);
     const body = this._extractRequestBody(request.body);
-    const headers = this._extractHeaders(request.header);
+    const _headers = this._extractHeaders(request.header);
     const testScript = this._extractTestScript(item.events);
 
     const mochaAssertions = TestConverter.convertPostmanTestToMocha(testScript);
@@ -100,7 +100,7 @@ describe('${testName}', function() {
       
       console.log('✓ ' + this.test?.title + ' - Status: ' + response.status + ', Time: ' + (Date.now() - startTime) + 'ms');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('✗ ' + this.test?.title + ' failed:', error.message);
       throw error;
     }
@@ -109,7 +109,7 @@ describe('${testName}', function() {
 `;
     } else {
       // Generate regular test with supertest
-      const requestCode = this._generateRequestCode(method, pathname, body, headers);
+      const requestCode = this._generateRequestCode(method, pathname, body, _headers);
       const defaultAssertion = 'expect(response.status).to.equal(200);';
 
       return `
@@ -134,7 +134,7 @@ describe('${testName}', function() {
   static generateEnhancedMochaTest(
     item: PostmanItem,
     parentName: string = '',
-    options: GenerationOptions = {}
+    _options: GenerationOptions = {}
   ): string {
     if (!item?.name) {
       throw new Error('Request item must have a name');
@@ -150,7 +150,6 @@ describe('${testName}', function() {
     const method = (request.method || 'GET').toLowerCase();
     const { pathname } = this._extractUrl(request.url, item.name);
     const body = this._extractRequestBody(request.body);
-    const headers = this._extractHeaders(request.header);
     const testScript = this._extractTestScript(item.events);
 
     const mochaAssertions = TestConverter.convertPostmanTestToMocha(testScript);
@@ -182,7 +181,7 @@ describe('${testName}', function() {
     testContent += '      // Log response for debugging\n';
     testContent += '      console.log(\'✓ \' + this.test?.title + \' - Status: \' + response.status + \', Time: \' + (Date.now() - startTime) + \'ms\');\n';
     testContent += '      \n';
-    testContent += '    } catch (error: any) {\n';
+    testContent += '    } catch (error: unknown) {\n';
     testContent += '      console.error(\'✗ \' + this.test?.title + \' failed:\', error.message);\n';
     testContent += '      throw error;\n';
     testContent += '    }\n';
@@ -198,7 +197,7 @@ describe('${testName}', function() {
    * Generate additional test cases based on the request type
    * @private
    */
-  private static _generateAdditionalTests(method: string, pathname: string, body: any): string {
+  private static _generateAdditionalTests(method: string, pathname: string, body: unknown): string {
     const tests: string[] = [];
 
     // Add smoke test for all endpoints
@@ -217,7 +216,7 @@ describe('${testName}', function() {
     try {
       const response = await api.get('${invalidPath}');
       expect(response.status).to.be.oneOf([404, 400]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Expected for invalid IDs
       expect(error.status).to.be.oneOf([404, 400]);
     }
@@ -231,7 +230,7 @@ describe('${testName}', function() {
       const response = await api.post('${pathname}', {});
       // Either succeeds with defaults or fails validation
       expect(response.status).to.be.oneOf([201, 400, 422]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       expect(error.status).to.be.oneOf([400, 422]);
     }
   });`);
@@ -253,7 +252,7 @@ describe('${testName}', function() {
     try {
       const response = await api.delete('${invalidPath}');
       expect(response.status).to.be.oneOf([404, 204]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       expect(error.status).to.equal(404);
     }
   });`);
@@ -268,15 +267,15 @@ describe('${testName}', function() {
    * Extract URL information from request
    * @private
    */
-  private static _extractUrl(requestUrl: any, _itemName: string): UrlInfo {
+  private static _extractUrl(requestUrl: unknown, _itemName: string): UrlInfo {
     let url = '';
     let pathname = '/';
 
     if (requestUrl) {
       try {
         url = requestUrl.toString();
-        pathname = new URL(url).pathname || '/';
-      } catch (_error) {
+        pathname = new globalThis.URL(url).pathname || '/';
+      } catch {
         // If URL parsing fails, try to extract path from raw URL
         if (typeof requestUrl === 'string') {
           const pathMatch = requestUrl.match(/\/[^?#]*/);
@@ -292,14 +291,14 @@ describe('${testName}', function() {
    * Extract request body
    * @private
    */
-  private static _extractRequestBody(requestBody?: PostmanRequest['body']): any {
+  private static _extractRequestBody(requestBody?: PostmanRequest['body']): unknown {
     if (!requestBody || requestBody.mode !== 'raw' || !requestBody.raw) {
       return null;
     }
 
     try {
       return JSON.parse(requestBody.raw);
-    } catch (error) {
+    } catch {
       return requestBody.raw;
     }
   }
@@ -341,7 +340,7 @@ describe('${testName}', function() {
   private static _generateRequestCode(
     method: string,
     pathname: string,
-    body: any,
+    body: unknown,
     headers: Record<string, string>
   ): string {
     let code = `const response = await request.${method}('${pathname}')`;

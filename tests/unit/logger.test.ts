@@ -3,7 +3,7 @@ import { Logger } from '../../src/utils/logger';
 
 interface ConsoleOutput {
   type: 'log' | 'error';
-  args: any[];
+  args: unknown[];
 }
 
 describe('Logger', () => {
@@ -17,8 +17,8 @@ describe('Logger', () => {
     originalLog = console.log;
     originalError = console.error;
 
-    console.log = (...args: any[]) => consoleOutput.push({ type: 'log', args });
-    console.error = (...args: any[]) => consoleOutput.push({ type: 'error', args });
+    console.log = (...args: unknown[]) => consoleOutput.push({ type: 'log', args });
+    console.error = (...args: unknown[]) => consoleOutput.push({ type: 'error', args });
 
     logger = new Logger({ timestamps: false });
   });

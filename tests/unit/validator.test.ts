@@ -23,7 +23,7 @@ describe('Validator', () => {
     });
 
     it('should return error for null collection', () => {
-      const result = Validator.validateCollection(null as any);
+      const result = Validator.validateCollection(null as unknown);
       expect(result.isValid).to.be.false;
       expect(result.errors).to.include('Collection is required');
     });
@@ -112,7 +112,7 @@ describe('Validator', () => {
       const environment: PostmanEnvironment = {
         name: 'Test',
         values: [
-          { value: 'test-value' } as any,
+          { value: 'test-value' } as unknown,
           { key: 'validKey', value: 'validValue' }
         ]
       };

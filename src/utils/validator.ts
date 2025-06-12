@@ -9,7 +9,7 @@ export interface PostmanCollection {
     name?: string;
     schema?: string;
   };
-  item?: any[];
+  item?: unknown[];
 }
 
 export interface PostmanEnvironment {

@@ -168,17 +168,17 @@ export class PostmanConverter {
       return 'https://api.example.com';
     }
 
-    const findFirstUrl = (itemGroup: any): string | null => {
+    const findFirstUrl = (itemGroup: unknown): string | null => {
       const members = itemGroup.items?.members || itemGroup.items?.all?.() || [];
       for (const item of members) {
         if (item.request?.url) {
           try {
             const url = item.request.url.toString();
-            const urlObj = new URL(url);
+            const urlObj = new globalThis.URL(url);
             const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
             logger.debug(`Found base URL: ${baseUrl}`);
             return baseUrl;
-          } catch (error) {
+          } catch {
             logger.debug(`Could not parse URL: ${item.request.url}`);
           }
         }
@@ -210,7 +210,7 @@ export class PostmanConverter {
       return {};
     }
 
-    const variables = envValues.members.reduce((acc: EnvironmentVariables, variable: any) => {
+    const variables = envValues.members.reduce((acc: EnvironmentVariables, variable: unknown) => {
       if (variable.key && variable.value) {
         acc[variable.key] = variable.value;
       }
@@ -226,7 +226,7 @@ export class PostmanConverter {
    * @private
    */
   private async _processItems(
-    itemGroup: any,
+    itemGroup: unknown,
     outputDir: string,
     parentPath: string = '',
     level: number = 0

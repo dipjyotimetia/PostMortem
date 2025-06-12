@@ -68,7 +68,7 @@ export class ProjectGenerator {
   private static async _generatePackageJson(
     outputDir: string,
     projectName: string,
-    baseUrl: string
+    _baseUrl: string
   ): Promise<void> {
     const packageJson = {
       name: projectName.toLowerCase().replace(/\s+/g, '-'),

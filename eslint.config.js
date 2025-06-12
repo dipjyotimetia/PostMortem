@@ -83,7 +83,7 @@ export default [
     }
   },
   {
-    files: ['tests/**/*.js'],
+    files: ['tests/**/*.js', 'tests/**/*.ts', 'src/setup.ts'],
     languageOptions: {
       globals: {
         describe: 'readonly',

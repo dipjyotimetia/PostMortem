@@ -224,8 +224,8 @@ describe('PostmanConverter Integration Tests', () => {
       try {
         await converter.processCollection(invalidCollection, tmpDir.name);
         expect.fail('Should have thrown an error');
-      } catch (error: any) {
-        expect(error.message).to.include('Invalid collection');
+      } catch (error: unknown) {
+        expect((error as Error).message).to.include('Invalid collection');
       }
     });
   });
