@@ -37,21 +37,21 @@ export {
  * @returns Processing results
  */
 export async function convert(
-  collectionPath: string, 
-  outputDir: string, 
-  environmentPath: string | null = null, 
+  collectionPath: string,
+  outputDir: string,
+  environmentPath: string | null = null,
   options: PostmanConverterOptions = {}
 ): Promise<ProcessingResults> {
   const converter = new PostmanConverter(options);
-  
+
   // Read files
   const collection = await FileSystem.readJsonFile(collectionPath);
   let environment = null;
-  
+
   if (environmentPath) {
     environment = await FileSystem.readJsonFile(environmentPath);
   }
-  
+
   // Process collection
   return converter.processCollection(collection, outputDir, environment);
 }

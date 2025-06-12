@@ -28,18 +28,18 @@ export class Logger {
 
   private _shouldLog(level: LogLevel): boolean {
     if (this.silent) return false;
-    
+
     const levels: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
     return levels[level] >= levels[this.level];
   }
 
   private _log(level: LogLevel, message: string, color: 'gray' | 'cyan' | 'green' | 'yellow' | 'red'): void {
     if (!this._shouldLog(level)) return;
-    
+
     const timestamp = this._getTimestamp();
     const levelStr = level.toUpperCase().padEnd(5);
     const output = `${timestamp}${chalk[color](`${levelStr}: ${message}`)}`;
-    
+
     if (level === 'error') {
       console.error(output);
     } else {

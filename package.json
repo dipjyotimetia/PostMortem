@@ -13,7 +13,7 @@
     "build:test": "tsc -p tsconfig.test.json",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
-    "test": "npm run build:test && mocha tests/**/*.test.js --recursive --timeout 10000 --require tests/setup.js",
+    "test": "npm run build && npm run build:test && mocha",
     "test:watch": "npm test -- --watch",
     "test:coverage": "nyc npm test",
     "lint": "eslint src tests --ext .ts,.js",
@@ -37,6 +37,7 @@
   "author": "Dipjyoti Metia",
   "license": "MIT",
   "dependencies": {
+    "axios": "^1.9.0",
     "chalk": "^4.1.2",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",

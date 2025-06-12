@@ -29,6 +29,7 @@ class CLI {
       .option('-d, --debug', 'Enable debug logging', false)
       .option('--no-setup', 'Skip creating setup.ts file')
       .option('--flat', 'Generate all test files in output directory (ignore folder structure)', false)
+      .option('--full-project', 'Generate a complete API test framework project with all configuration files', false)
       .option('--silent', 'Suppress all output except errors', false);
   }
 
@@ -36,13 +37,13 @@ class CLI {
     try {
       this.program.parse();
       const options = this.program.opts() as CLIOptions & { setup: boolean };
-      
+
       // Configure logger
       if (options.debug) {
         logger.setLevel('debug');
         logger.info('Debug mode enabled');
       }
-      
+
       if (options.silent) {
         logger.setSilent(true);
       }
@@ -75,7 +76,8 @@ class CLI {
         collectionJson = await FileSystem.readJsonFile(collectionPath);
         logger.debug('Collection file read successfully');
       } catch (error) {
-        logger.error(`Failed to read collection file: ${(error as Error).message}`);
+        const message = `File not found: ${(error as Error).message}`;
+        logger.error(message);
         process.exit(1);
       }
 
@@ -89,32 +91,40 @@ class CLI {
           logger.warn(`Failed to read environment file: ${(error as Error).message}`);
         }
       }
-      
+
+      // Validate collection before processing
+      const collectionValidation = Validator.validateCollection(collectionJson);
+      if (!collectionValidation.isValid) {
+        logger.error(`Invalid collection: ${collectionValidation.errors.join(', ')}`);
+        process.exit(1);
+      }
+
       // Create converter with options
       const converter = new PostmanConverter({
         outputDir: options.output,
         createSetupFile: options.setup !== false,
-        maintainFolderStructure: !options.flat
+        maintainFolderStructure: !options.flat,
+        generateFullProject: options.fullProject
       });
-      
+
       // Process the collection
       const results = await converter.processCollection(
-        collectionJson, 
-        options.output || './test', 
+        collectionJson,
+        options.output || './test',
         environmentJson
       );
-      
-      logger.success(`✨ Conversion completed successfully!`);
+
+      logger.success('✨ Conversion completed successfully!');
       logger.info(`📁 Generated ${results.testFiles} test files in ${options.output}`);
       if (results.folders > 0) {
         logger.info(`📂 Created ${results.folders} folders`);
       }
       logger.info(`🌐 Base URL: ${results.baseUrl}`);
-      
+
       if (results.environment && Object.keys(results.environment).length > 0) {
         logger.info(`🌍 Environment variables: ${Object.keys(results.environment).length}`);
       }
-      
+
     } catch (error) {
       logger.error(`Conversion failed: ${(error as Error).message}`);
       if (process.env.DEBUG) {

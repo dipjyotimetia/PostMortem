@@ -14,11 +14,11 @@ export class FileSystem {
     try {
       const absolutePath = path.resolve(filePath);
       const exists = await fs.pathExists(absolutePath);
-      
+
       if (!exists) {
         throw new Error(`File not found: ${absolutePath}`);
       }
-      
+
       const content = await fs.readFile(absolutePath, 'utf8');
       return JSON.parse(content);
     } catch (error) {
@@ -61,6 +61,26 @@ export class FileSystem {
    */
   static async exists(filePath: string): Promise<boolean> {
     return fs.pathExists(filePath);
+  }
+
+  /**
+   * Read file content
+   * @param filePath - Path to read from
+   * @returns File content as string
+   */
+  static async readFile(filePath: string): Promise<string> {
+    try {
+      const absolutePath = path.resolve(filePath);
+      const exists = await fs.pathExists(absolutePath);
+
+      if (!exists) {
+        throw new Error(`File not found: ${absolutePath}`);
+      }
+
+      return await fs.readFile(absolutePath, 'utf8');
+    } catch (error) {
+      throw new Error(`Failed to read file ${filePath}: ${(error as Error).message}`);
+    }
   }
 
   /**

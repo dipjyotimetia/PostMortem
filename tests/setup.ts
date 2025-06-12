@@ -1,5 +1,4 @@
-// Global test setup
-const chai = require('chai');
+import * as chai from 'chai';
 
 // Set up global test configurations
 process.env.NODE_ENV = 'test';
@@ -15,12 +14,10 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Export for tests that need it
-module.exports = {
-  setupTest: function() {
-    // Reset any environment variables that might affect tests
-    delete process.env.DEBUG;
-    delete process.env.LOG_LEVEL;
-    delete process.env.API_BASE_URL;
-    delete process.env.TEST_TIMEOUT;
-  }
+export const setupTest = function(): void {
+  // Reset any environment variables that might affect tests
+  delete process.env.DEBUG;
+  delete process.env.LOG_LEVEL;
+  delete process.env.API_BASE_URL;
+  delete process.env.TEST_TIMEOUT;
 };

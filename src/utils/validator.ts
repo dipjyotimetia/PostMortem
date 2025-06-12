@@ -28,6 +28,7 @@ export interface CLIOptions {
   setup?: boolean;
   flat?: boolean;
   silent?: boolean;
+  fullProject?: boolean;
 }
 
 /**

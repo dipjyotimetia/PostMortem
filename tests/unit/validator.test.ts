@@ -1,10 +1,10 @@
-const { expect } = require('chai');
-const Validator = require('../../src/utils/validator');
+import { expect } from 'chai';
+import { Validator, PostmanCollection, PostmanEnvironment } from '../../src/utils/validator';
 
-describe('Validator', function() {
-  describe('validateCollection', function() {
-    it('should validate correct collection', function() {
-      const collection = {
+describe('Validator', () => {
+  describe('validateCollection', () => {
+    it('should validate correct collection', () => {
+      const collection: PostmanCollection = {
         info: {
           name: 'Test Collection',
           schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
@@ -22,28 +22,28 @@ describe('Validator', function() {
       expect(result.errors).to.be.empty;
     });
 
-    it('should return error for null collection', function() {
-      const result = Validator.validateCollection(null);
+    it('should return error for null collection', () => {
+      const result = Validator.validateCollection(null as any);
       expect(result.isValid).to.be.false;
       expect(result.errors).to.include('Collection is required');
     });
 
-    it('should return error for collection without info', function() {
-      const collection = { item: [] };
+    it('should return error for collection without info', () => {
+      const collection = { item: [] } as PostmanCollection;
       const result = Validator.validateCollection(collection);
       expect(result.isValid).to.be.false;
       expect(result.errors).to.include('Collection must have an info object');
     });
 
-    it('should return error for collection without items', function() {
-      const collection = { info: { name: 'Test' } };
+    it('should return error for collection without items', () => {
+      const collection = { info: { name: 'Test' } } as PostmanCollection;
       const result = Validator.validateCollection(collection);
       expect(result.isValid).to.be.false;
       expect(result.errors).to.include('Collection must have an items array');
     });
 
-    it('should return warning for collection without name', function() {
-      const collection = {
+    it('should return warning for collection without name', () => {
+      const collection: PostmanCollection = {
         info: {},
         item: []
       };
@@ -52,8 +52,8 @@ describe('Validator', function() {
       expect(result.warnings).to.include('Collection name is missing');
     });
 
-    it('should return warning for empty collection', function() {
-      const collection = {
+    it('should return warning for empty collection', () => {
+      const collection: PostmanCollection = {
         info: { name: 'Test' },
         item: []
       };
@@ -63,9 +63,9 @@ describe('Validator', function() {
     });
   });
 
-  describe('validateEnvironment', function() {
-    it('should validate correct environment', function() {
-      const environment = {
+  describe('validateEnvironment', () => {
+    it('should validate correct environment', () => {
+      const environment: PostmanEnvironment = {
         name: 'Test Environment',
         values: [
           { key: 'baseUrl', value: 'https://api.example.com' },
@@ -78,28 +78,28 @@ describe('Validator', function() {
       expect(result.errors).to.be.empty;
     });
 
-    it('should allow null environment', function() {
+    it('should allow null environment', () => {
       const result = Validator.validateEnvironment(null);
       expect(result.isValid).to.be.true;
       expect(result.errors).to.be.empty;
     });
 
-    it('should return error for environment without values array', function() {
-      const environment = { name: 'Test' };
+    it('should return error for environment without values array', () => {
+      const environment = { name: 'Test' } as PostmanEnvironment;
       const result = Validator.validateEnvironment(environment);
       expect(result.isValid).to.be.false;
       expect(result.errors).to.include('Environment must have a values array');
     });
 
-    it('should return warning for environment without name', function() {
-      const environment = { values: [] };
+    it('should return warning for environment without name', () => {
+      const environment: PostmanEnvironment = { values: [] };
       const result = Validator.validateEnvironment(environment);
       expect(result.isValid).to.be.true;
       expect(result.warnings).to.include('Environment name is missing');
     });
 
-    it('should return warning for empty environment', function() {
-      const environment = {
+    it('should return warning for empty environment', () => {
+      const environment: PostmanEnvironment = {
         name: 'Test',
         values: []
       };
@@ -108,11 +108,11 @@ describe('Validator', function() {
       expect(result.warnings).to.include('Environment has no variables');
     });
 
-    it('should return warning for variables without keys', function() {
-      const environment = {
+    it('should return warning for variables without keys', () => {
+      const environment: PostmanEnvironment = {
         name: 'Test',
         values: [
-          { value: 'test-value' },
+          { value: 'test-value' } as any,
           { key: 'validKey', value: 'validValue' }
         ]
       };
@@ -122,8 +122,8 @@ describe('Validator', function() {
     });
   });
 
-  describe('validateOptions', function() {
-    it('should validate correct options', function() {
+  describe('validateOptions', () => {
+    it('should validate correct options', () => {
       const options = {
         collection: './test-collection.json',
         output: './output'
@@ -134,14 +134,14 @@ describe('Validator', function() {
       expect(result.errors).to.be.empty;
     });
 
-    it('should return error for missing collection', function() {
+    it('should return error for missing collection', () => {
       const options = { output: './output' };
       const result = Validator.validateOptions(options);
       expect(result.isValid).to.be.false;
       expect(result.errors).to.include('Collection path is required');
     });
 
-    it('should return warning for missing output', function() {
+    it('should return warning for missing output', () => {
       const options = { collection: './test.json' };
       const result = Validator.validateOptions(options);
       expect(result.isValid).to.be.true;
