@@ -4,15 +4,15 @@
 [![Node Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen.svg)](https://nodejs.org/)
 [![npm version](https://badge.fury.io/js/postmortem.svg)](https://badge.fury.io/js/postmortem)
 
-Convert Postman collections to Mocha/Supertest tests automatically.
+Convert Postman collections to complete Mocha/Supertest test frameworks automatically.
 
 ## Features
 
-- Convert Postman collections to Mocha test suites
-- Support for environment variables and .env files
-- Maintains folder structure from Postman
-- Converts test assertions to Chai
-- TypeScript support included
+- 🔄 **Complete Project Generation** - Creates a full test framework with proper structure
+- 📁 **Folder Structure Preservation** - Maintains your Postman collection organization
+- 🧪 **Modern Test Framework** - Generates Mocha tests with Chai assertions and Supertest
+- 🔧 **TypeScript Ready** - Includes TypeScript configuration and type definitions
+- 🌍 **Environment Support** - Handles Postman environments and generates .env files
 
 ## Installation
 
@@ -41,19 +41,34 @@ npx @dipjyotimetia/postmortem -c ./my-collection.json -o ./test-output
 ### Options
 
 - `-c, --collection <path>` - Path to Postman collection JSON file (required)
-- `-o, --output <directory>` - Output directory for generated test files (default: test)
+- `-o, --output <directory>` - Output directory for generated test files (default: test-output)
 - `-e, --environment <path>` - Path to Postman environment JSON file (optional)
 - `--flat` - Generate all test files in output directory (ignore folder structure)
-- `--no-setup` - Skip creating setup.js file
+- `--no-setup` - Skip creating setup.js and package.json files
+- `--debug` - Enable debug logging
+- `--silent` - Suppress console output
 
 ### Programmatic Usage
 
 ```javascript
 const { PostmanConverter } = require('@dipjyotimetia/postmortem');
 
-const converter = new PostmanConverter();
+const converter = new PostmanConverter({
+  outputDir: './my-tests',
+  flatOutput: false,
+  includeSetup: true,
+  logLevel: 'info'
+});
+
 const collection = require('./my-collection.json');
-const results = await converter.processCollection(collection, './test-output');
+const environment = require('./my-environment.json'); // optional
+
+try {
+  const results = await converter.processCollection(collection, environment);
+  console.log(`Generated ${results.testCount} tests in ${results.outputDir}`);
+} catch (error) {
+  console.error('Conversion failed:', error.message);
+}
 ```
 
 ## Example
@@ -63,23 +78,42 @@ const results = await converter.processCollection(collection, './test-output');
 {
   "info": { "name": "My API Tests" },
   "item": [{
-    "name": "Get Users",
-    "request": {
-      "method": "GET", 
-      "url": "https://api.example.com/users"
-    }
+    "name": "Users API",
+    "item": [{
+      "name": "Get Users",
+      "request": {
+        "method": "GET", 
+        "url": "{{baseUrl}}/users"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": ["pm.test('Status is 200', () => pm.response.to.have.status(200));"]
+        }
+      }]
+    }]
   }]
 }
 ```
 
 ### Output: Generated Test
 ```javascript
-const { request, expect } = require('./setup.js');
+const { request, expect } = require('../../setup');
 
-describe('Get Users', function() {
-  it('should respond with correct data', async function() {
-    const response = await request.get('/users');
-    expect(response.status).to.equal(200);
+describe('Users API', function() {
+  describe('Get Users', function() {
+    it('Status is 200', async function() {
+      const response = await request.get('/users');
+      expect(response.status).to.equal(200);
+    });
   });
 });
 ```
+
+## Contributing
+
+We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
