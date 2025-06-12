@@ -53,5 +53,5 @@ export async function convert(
   }
 
   // Process collection
-  return converter.processCollection(collection, outputDir, environment);
+  return converter.processCollection(collection as PostmanCollection, outputDir, environment as PostmanEnvironment | null);
 }

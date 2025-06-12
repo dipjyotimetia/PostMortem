@@ -27,7 +27,7 @@ export function expectRequiredFields(data: unknown, fields: string[]): void {
 
   for (const field of fields) {
     expect(data, `Response should have field: ${field}`).to.have.property(field);
-    expect(data[field], `Field ${field} should not be null or undefined`).to.not.be.oneOf([null, undefined]);
+    expect((data as any)[field], `Field ${field} should not be null or undefined`).to.not.be.oneOf([null, undefined]);
   }
 }
 
@@ -36,7 +36,7 @@ export function expectRequiredFields(data: unknown, fields: string[]): void {
  */
 export function expectArray(data: unknown, minLength: number = 0): void {
   expect(data, 'Response data should be an array').to.be.an('array');
-  expect(data.length, `Array should have at least ${minLength} items`).to.be.at.least(minLength);
+  expect((data as any[]).length, `Array should have at least ${minLength} items`).to.be.at.least(minLength);
 }
 
 /**
@@ -56,8 +56,8 @@ export function expectPagination(data: unknown): void {
   const paginationFields = ['page', 'limit', 'total'];
   const hasAnyPaginationField = paginationFields.some(field =>
     Object.prototype.hasOwnProperty.call(data, field) ||
-    (data.meta && Object.prototype.hasOwnProperty.call(data.meta, field)) ||
-    (data.pagination && Object.prototype.hasOwnProperty.call(data.pagination, field))
+    ((data as any).meta && Object.prototype.hasOwnProperty.call((data as any).meta, field)) ||
+    ((data as any).pagination && Object.prototype.hasOwnProperty.call((data as any).pagination, field))
   );
 
   expect(hasAnyPaginationField, 'Response should contain pagination metadata').to.be.true;
@@ -89,7 +89,7 @@ export function expectSchema(data: unknown, schema: Record<string, string>): voi
   for (const [field, expectedType] of Object.entries(schema)) {
     expect(data, `Response should have field: ${field}`).to.have.property(field);
 
-    const actualValue = data[field];
+    const actualValue = (data as any)[field];
     switch (expectedType) {
     case 'string':
       expect(actualValue, `Field ${field} should be a string`).to.be.a('string');
@@ -108,7 +108,7 @@ export function expectSchema(data: unknown, schema: Record<string, string>): voi
       break;
     case 'date':
       expect(actualValue, `Field ${field} should be a valid date`).to.satisfy((val: unknown) => {
-        return !isNaN(Date.parse(val));
+        return !isNaN(Date.parse(val as string));
       });
       break;
     default:
@@ -143,7 +143,7 @@ export function expectAuthToken(data: unknown): void {
 
   const tokenField = tokenFields.find(field => Object.prototype.hasOwnProperty.call(data, field));
   if (tokenField) {
-    expect(data[tokenField], 'Token should not be empty').to.be.a('string').and.not.be.empty;
+    expect((data as any)[tokenField], 'Token should not be empty').to.be.a('string').and.not.be.empty;
   }
 }
 

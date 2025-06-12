@@ -4,7 +4,7 @@ import * as path from 'path';
 import { Command } from 'commander';
 import { logger } from './utils/logger';
 import { FileSystem } from './utils/filesystem';
-import { Validator, CLIOptions } from './utils/validator';
+import { Validator, CLIOptions, PostmanCollection, PostmanEnvironment } from './utils/validator';
 import { PostmanConverter } from './postman-converter';
 
 /**
@@ -93,7 +93,7 @@ class CLI {
       }
 
       // Validate collection before processing
-      const collectionValidation = Validator.validateCollection(collectionJson);
+      const collectionValidation = Validator.validateCollection(collectionJson as PostmanCollection);
       if (!collectionValidation.isValid) {
         logger.error(`Invalid collection: ${collectionValidation.errors.join(', ')}`);
         process.exit(1);
@@ -109,9 +109,9 @@ class CLI {
 
       // Process the collection
       const results = await converter.processCollection(
-        collectionJson,
+        collectionJson as PostmanCollection,
         options.output || './test',
-        environmentJson
+        environmentJson as PostmanEnvironment | null
       );
 
       logger.success('✨ Conversion completed successfully!');

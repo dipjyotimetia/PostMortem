@@ -77,7 +77,7 @@ export class PostmanConverter {
     }
 
     // Convert to SDK objects
-    const collection = new sdk.Collection(rawCollection);
+    const collection = new sdk.Collection(rawCollection as any);
     const environment = rawEnvironment ? new sdk.VariableScope(rawEnvironment) : null;
 
     if (environment) {
@@ -168,8 +168,8 @@ export class PostmanConverter {
       return 'https://api.example.com';
     }
 
-    const findFirstUrl = (itemGroup: unknown): string | null => {
-      const members = itemGroup.items?.members || itemGroup.items?.all?.() || [];
+    const findFirstUrl = (itemGroup: any): string | null => {
+      const members = (itemGroup as any).items?.members || (itemGroup as any).items?.all?.() || [];
       for (const item of members) {
         if (item.request?.url) {
           try {
@@ -210,7 +210,7 @@ export class PostmanConverter {
       return {};
     }
 
-    const variables = envValues.members.reduce((acc: EnvironmentVariables, variable: unknown) => {
+    const variables = envValues.members.reduce((acc: EnvironmentVariables, variable: any) => {
       if (variable.key && variable.value) {
         acc[variable.key] = variable.value;
       }
@@ -226,12 +226,12 @@ export class PostmanConverter {
    * @private
    */
   private async _processItems(
-    itemGroup: unknown,
+    itemGroup: any,
     outputDir: string,
     parentPath: string = '',
     level: number = 0
   ): Promise<InternalProcessingResults> {
-    const items = itemGroup?.items?.members || itemGroup?.items?.all?.() || [];
+    const items = (itemGroup as any)?.items?.members || (itemGroup as any)?.items?.all?.() || [];
     if (!items || items.length === 0) {
       logger.warn(`${' '.repeat(level * 2)}No items found in group`);
       return { testFiles: 0, folders: 0 };
