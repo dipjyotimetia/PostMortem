@@ -81,29 +81,11 @@ jobs:
         node-version: '22.x'
         cache: 'npm'
         
-    - name: Install CLI dependencies (required for extension)
+    - name: Install workspace dependencies
       run: npm ci
       
-    - name: Build CLI (required for extension dependency)
-      run: npm run build
+    - name: Build all projects (CLI + Extension)
+      run: npm run build:all
       
-    - name: Install extension dependencies
-      working-directory: ./vscode-extension
-      run: npm ci
-
-    - name: Verify CLI dependency is available
-      working-directory: ./vscode-extension
-      run: |
-        # Check if the CLI module is properly linked
-        ls -la node_modules/@dipjyotimetia/postmortem
-        # Verify the built CLI files exist
-        test -f ../dist/index.js
-        echo "✅ CLI dependency verified"
-      
-    - name: Compile extension
-      working-directory: ./vscode-extension
-      run: npm run compile
-      
-    - name: Run extension linting
-      working-directory: ./vscode-extension
-      run: npm run lint
+    - name: Test extension
+      run: npm run test:extension

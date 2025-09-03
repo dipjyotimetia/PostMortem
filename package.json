@@ -7,6 +7,9 @@
   "bin": {
     "postmortem": "./dist/cli.js"
   },
+  "workspaces": [
+    "vscode-extension"
+  ],
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
@@ -21,6 +24,10 @@
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'src/**/*.js' 'tests/**/*.js'",
     "convert": "npm run build && node dist/cli.js -c ./collection/Platzi_postman_collection.json -o ./test-output",
     "convert:debug": "npm run build && node dist/cli.js -c ./collection/Platzi_postman_collection.json -o ./test-output --debug",
+    "build:extension": "npm run build && npm run compile --workspace=vscode-extension",
+    "build:all": "npm run build && npm run build:extension",
+    "test:extension": "npm run lint --workspace=vscode-extension",
+    "test:all": "npm run test && npm run test:extension",
     "prepublishOnly": "npm run build && npm test && npm run lint",
     "dev": "ts-node src/cli.ts"
   },
