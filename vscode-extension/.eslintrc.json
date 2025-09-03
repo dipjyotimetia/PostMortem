@@ -26,5 +26,9 @@
     "out",
     "dist",
     "**/*.d.ts"
-  ]
+  ],
+  "env": {
+    "mocha": true,
+    "node": true
+  }
 }
