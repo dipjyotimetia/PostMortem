@@ -105,6 +105,15 @@ jobs:
         working-directory: ./vscode-extension
         run: npm ci
 
+      - name: Verify CLI dependency is available
+        working-directory: ./vscode-extension
+        run: |
+          # Check if the CLI module is properly linked
+          ls -la node_modules/@dipjyotimetia/postmortem
+          # Verify the built CLI files exist
+          test -f ../dist/index.js
+          echo "✅ CLI dependency verified"
+
       - name: Compile extension
         working-directory: ./vscode-extension
         run: npm run compile
@@ -112,6 +121,13 @@ jobs:
       - name: Run extension linting
         working-directory: ./vscode-extension
         run: npm run lint
+
+      - name: Test extension build integrity
+        working-directory: ./vscode-extension
+        run: |
+          # Verify extension.js was compiled
+          test -f dist/extension.js
+          echo "✅ Extension build verified"
 
       - name: Install vsce
         run: npm install -g @vscode/vsce
