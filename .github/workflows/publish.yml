@@ -3,6 +3,10 @@ name: Publish CLI and VSCode Extension
 on:
   release:
     types: [published]
+  push:
+    tags:
+      - 'cli-v*'
+      - 'ext-v*'
   workflow_dispatch:
     inputs:
       publish_cli:
@@ -17,8 +21,34 @@ on:
         type: boolean
 
 jobs:
+  # Determine what should be published based on trigger
+  check-trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      publish_cli: ${{ steps.check.outputs.publish_cli }}
+      publish_extension: ${{ steps.check.outputs.publish_extension }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            echo "publish_cli=true" >> $GITHUB_OUTPUT
+            echo "publish_extension=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            if [[ "${{ github.ref }}" == refs/tags/cli-v* ]]; then
+              echo "publish_cli=true" >> $GITHUB_OUTPUT
+              echo "publish_extension=false" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.ref }}" == refs/tags/ext-v* ]]; then
+              echo "publish_cli=false" >> $GITHUB_OUTPUT
+              echo "publish_extension=true" >> $GITHUB_OUTPUT
+            fi
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "publish_cli=${{ inputs.publish_cli }}" >> $GITHUB_OUTPUT
+            echo "publish_extension=${{ inputs.publish_extension }}" >> $GITHUB_OUTPUT
+          fi
+
   publish-cli:
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish_cli)
+    needs: check-trigger
+    if: needs.check-trigger.outputs.publish_cli == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,9 +81,9 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-extension:
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish_extension)
+    needs: [check-trigger, publish-cli]
+    if: always() && needs.check-trigger.outputs.publish_extension == 'true' && (needs.publish-cli.result == 'success' || needs.publish-cli.result == 'skipped')
     runs-on: ubuntu-latest
-    needs: publish-cli
     permissions:
       contents: read
     steps:
