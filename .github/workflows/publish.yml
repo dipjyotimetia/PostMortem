@@ -1,11 +1,24 @@
-name: Publish to NPM
+name: Publish CLI and VSCode Extension
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      publish_cli:
+        description: 'Publish CLI package to NPM'
+        required: true
+        default: true
+        type: boolean
+      publish_extension:
+        description: 'Publish VSCode extension to Marketplace'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
-  publish:
+  publish-cli:
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish_cli)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,19 +33,71 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install dependencies
+      - name: Install CLI dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build CLI
         run: npm run build
 
-      - name: Run tests
+      - name: Run CLI tests
         run: npm test
 
-      - name: Run linting
+      - name: Run CLI linting
         run: npm run lint
 
-      - name: Publish to NPM
+      - name: Publish CLI to NPM
         run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-extension:
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish_extension)
+    runs-on: ubuntu-latest
+    needs: publish-cli
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install CLI dependencies (for extension dependency)
+        run: npm ci
+
+      - name: Build CLI (for extension dependency)
+        run: npm run build
+
+      - name: Install extension dependencies
+        working-directory: ./vscode-extension
+        run: npm ci
+
+      - name: Compile extension
+        working-directory: ./vscode-extension
+        run: npm run compile
+
+      - name: Run extension linting
+        working-directory: ./vscode-extension
+        run: npm run lint
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package VSCode extension
+        working-directory: ./vscode-extension
+        run: vsce package
+
+      - name: Publish VSCode extension
+        working-directory: ./vscode-extension
+        run: vsce publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Upload VSIX as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension
+          path: ./vscode-extension/*.vsix
