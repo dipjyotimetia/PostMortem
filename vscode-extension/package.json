@@ -2,7 +2,7 @@
   "name": "postmortem",
   "displayName": "PostMortem - Postman to Tests",
   "description": "Generate Mocha/Supertest tests from Postman collections",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "dipjyotimetia",
   "engines": {
     "vscode": "^1.100.0"
@@ -76,14 +76,14 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.100.0",
     "@types/node": "20.x",
+    "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
     "eslint": "^9.34.0",
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@dipjyotimetia/postmortem": "file:../"
+    "@dipjyotimetia/postmortem": "file:.."
   }
 }
