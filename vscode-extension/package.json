@@ -73,7 +73,8 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build-deps && npm run compile",
+    "build-deps": "cd .. && npm run build",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
@@ -96,6 +97,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@dipjyotimetia/postmortem": "*"
+    "@dipjyotimetia/postmortem": "file:.."
   }
 }

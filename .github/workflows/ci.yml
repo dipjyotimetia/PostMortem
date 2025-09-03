@@ -81,11 +81,20 @@ jobs:
         node-version: '22.x'
         cache: 'npm'
         
-    - name: Install workspace dependencies
+    - name: Install CLI dependencies
       run: npm ci
       
-    - name: Build all projects (CLI + Extension)
-      run: npm run build:all
+    - name: Build CLI
+      run: npm run build
       
-    - name: Test extension
-      run: npm run test:extension
+    - name: Install extension dependencies
+      working-directory: ./vscode-extension
+      run: npm ci
+      
+    - name: Compile extension
+      working-directory: ./vscode-extension
+      run: npm run compile
+      
+    - name: Run extension linting
+      working-directory: ./vscode-extension
+      run: npm run lint
