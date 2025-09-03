@@ -1,0 +1,89 @@
+{
+  "name": "postmortem",
+  "displayName": "PostMortem - Postman to Tests",
+  "description": "Generate Mocha/Supertest tests from Postman collections",
+  "version": "0.0.1",
+  "publisher": "dipjyotimetia",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "postman",
+    "testing",
+    "mocha",
+    "supertest",
+    "api"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "postmortem.generateFromCollection",
+        "title": "Generate Tests from Postman Collection",
+        "category": "PostMortem"
+      },
+      {
+        "command": "postmortem.generateFromFile",
+        "title": "Generate Tests from Collection File",
+        "category": "PostMortem"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "postmortem.generateFromFile",
+          "when": "resourceExtname == .json",
+          "group": "postmortem"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "PostMortem",
+      "properties": {
+        "postmortem.outputDirectory": {
+          "type": "string",
+          "default": "./tests",
+          "description": "Default output directory for generated tests"
+        },
+        "postmortem.maintainFolderStructure": {
+          "type": "boolean",
+          "default": true,
+          "description": "Maintain Postman collection folder structure"
+        },
+        "postmortem.generateFullProject": {
+          "type": "boolean",
+          "default": false,
+          "description": "Generate complete test framework with enhanced features"
+        },
+        "postmortem.createSetupFile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create setup.ts file for test configuration"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.100.0",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "eslint": "^9.34.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@dipjyotimetia/postmortem": "file:../"
+  }
+}
