@@ -1,15 +1,33 @@
-name: Update Version
+name: Update Versions
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      update_cli:
+        description: 'Update CLI package version'
+        required: true
+        default: true
+        type: boolean
+      update_extension:
+        description: 'Update VSCode extension version'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
-  update-version:
+  update-versions:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +39,13 @@ jobs:
       with:
         node-version: '22'
 
-    - name: Install dependencies
+    - name: Install CLI dependencies
+      if: inputs.update_cli == true
+      run: npm install
+
+    - name: Install extension dependencies
+      if: inputs.update_extension == true
+      working-directory: ./vscode-extension
       run: npm install
 
     - name: Configure Git user
@@ -29,16 +53,111 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-    - name: Commit any changes
+    - name: Get current CLI version
+      if: inputs.update_cli == true
+      id: cli_version
+      run: |
+        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Get current extension version
+      if: inputs.update_extension == true
+      id: ext_version
+      run: |
+        CURRENT_VERSION=$(node -p "require('./vscode-extension/package.json').version")
+        echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Bump CLI version
+      if: inputs.update_cli == true
+      id: cli_new_version
+      run: |
+        npm version ${{ inputs.version_type }} --no-git-tag-version
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Bump extension version
+      if: inputs.update_extension == true
+      id: ext_new_version
+      working-directory: ./vscode-extension
+      run: |
+        npm version ${{ inputs.version_type }} --no-git-tag-version
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Update extension dependency reference
+      if: inputs.update_cli == true && inputs.update_extension == true
+      run: |
+        # Update the file reference to ensure extension uses latest CLI
+        cd vscode-extension
+        npm install ../
+
+    - name: Update CHANGELOG files
+      run: |
+        # Update CLI CHANGELOG
+        if [ "${{ inputs.update_cli }}" == "true" ]; then
+          CLI_VERSION="${{ steps.cli_new_version.outputs.new }}"
+          sed -i "1i\\## [$CLI_VERSION] - $(date +%Y-%m-%d)\\n\\n### Changed\\n- Version bump to $CLI_VERSION\\n" CHANGELOG.md
+        fi
+        
+        # Update extension CHANGELOG
+        if [ "${{ inputs.update_extension }}" == "true" ]; then
+          EXT_VERSION="${{ steps.ext_new_version.outputs.new }}"
+          sed -i "1i\\## [$EXT_VERSION] - $(date +%Y-%m-%d)\\n\\n### Changed\\n- Version bump to $EXT_VERSION\\n" vscode-extension/CHANGELOG.md
+        fi
+
+    - name: Commit version changes
       run: |
         git add .
-        git diff --staged --quiet || git commit -m "Auto-update dependencies"
+        
+        COMMIT_MESSAGE="chore: version bump"
+        
+        if [ "${{ inputs.update_cli }}" == "true" ]; then
+          COMMIT_MESSAGE="$COMMIT_MESSAGE - CLI: ${{ steps.cli_new_version.outputs.new }}"
+        fi
+        
+        if [ "${{ inputs.update_extension }}" == "true" ]; then
+          COMMIT_MESSAGE="$COMMIT_MESSAGE - Extension: ${{ steps.ext_new_version.outputs.new }}"
+        fi
+        
+        git commit -m "$COMMIT_MESSAGE" || echo "No changes to commit"
 
-    - name: Bump version
-      run: npm version patch
+    - name: Create tags
+      run: |
+        if [ "${{ inputs.update_cli }}" == "true" ]; then
+          git tag "cli-v${{ steps.cli_new_version.outputs.new }}"
+        fi
+        
+        if [ "${{ inputs.update_extension }}" == "true" ]; then
+          git tag "ext-v${{ steps.ext_new_version.outputs.new }}"
+        fi
 
-    - name: Push changes
+    - name: Push changes and tags
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git push --follow-tags
+        git push origin main --follow-tags
+
+    - name: Create release summary
+      run: |
+        echo "## Version Update Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ inputs.update_cli }}" == "true" ]; then
+          echo "### 📦 CLI Package" >> $GITHUB_STEP_SUMMARY
+          echo "- **Previous version:** ${{ steps.cli_version.outputs.current }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New version:** ${{ steps.cli_new_version.outputs.new }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** cli-v${{ steps.cli_new_version.outputs.new }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ inputs.update_extension }}" == "true" ]; then
+          echo "### 🔧 VSCode Extension" >> $GITHUB_STEP_SUMMARY
+          echo "- **Previous version:** ${{ steps.ext_version.outputs.current }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New version:** ${{ steps.ext_new_version.outputs.new }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** ext-v${{ steps.ext_new_version.outputs.new }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "### 🚀 Next Steps" >> $GITHUB_STEP_SUMMARY
+        echo "- Run the **Publish CLI and VSCode Extension** workflow to release" >> $GITHUB_STEP_SUMMARY
+        echo "- Or create a GitHub release to trigger automatic publishing" >> $GITHUB_STEP_SUMMARY
