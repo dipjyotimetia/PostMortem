@@ -63,11 +63,11 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install CLI dependencies
+      - name: Install workspace dependencies
         run: npm ci
 
       - name: Build CLI
-        run: npm run build
+        run: npm run build:cli
 
       - name: Run CLI tests
         run: npm test
@@ -95,19 +95,11 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install CLI dependencies
+      - name: Install workspace dependencies
         run: npm ci
 
-      - name: Build CLI
+      - name: Build all packages
         run: npm run build
-
-      - name: Install extension dependencies
-        working-directory: ./vscode-extension
-        run: npm ci
-
-      - name: Compile extension
-        working-directory: ./vscode-extension
-        run: npm run compile
 
       - name: Run extension linting
         working-directory: ./vscode-extension

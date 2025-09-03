@@ -20,14 +20,14 @@ jobs:
         node-version: '22'
         cache: npm
 
-    - name: Install dependencies
+    - name: Install workspace dependencies
       run: npm ci
       
-    - name: Run linter
+    - name: Run linter (all packages)
       run: npm run lint
       
-    - name: Run tests
-      run: npm test
+    - name: Run tests (all packages)
+      run: npm run test:all
       
     - name: Run test coverage
       run: npm run test:coverage
@@ -53,48 +53,17 @@ jobs:
         node-version: '22.x'
         cache: 'npm'
         
-    - name: Install CLI dependencies
+    - name: Install workspace dependencies
       run: npm ci
       
-    - name: Build CLI
+    - name: Build all packages
       run: npm run build
       
     - name: Test conversion with example collection
       run: npm run convert
       
-    - name: Verify generated tests
+    - name: Verify generated tests and extension build
       run: |
         test -f test-output/setup.ts
-        echo "✅ Test generation successful"
-
-  extension-build:
-    runs-on: ubuntu-latest
-    needs: build
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22.x'
-        cache: 'npm'
-        
-    - name: Install CLI dependencies
-      run: npm ci
-      
-    - name: Build CLI
-      run: npm run build
-      
-    - name: Install extension dependencies
-      working-directory: ./vscode-extension
-      run: npm ci
-      
-    - name: Compile extension
-      working-directory: ./vscode-extension
-      run: npm run compile
-      
-    - name: Run extension linting
-      working-directory: ./vscode-extension
-      run: npm run lint
+        test -f vscode-extension/dist/extension.js
+        echo "✅ All builds successful"

@@ -110,6 +110,26 @@ describe('Users API', function() {
 });
 ```
 
+## Development
+
+This project uses npm workspaces to manage the CLI package and VSCode extension together:
+
+```bash
+# Install all dependencies (CLI + extension)
+npm install
+
+# Build all packages
+npm run build
+
+# Run all tests
+npm run test:all
+
+# Lint all packages
+npm run lint
+```
+
+For more details, see [WORKSPACE.md](WORKSPACE.md).
+
 ## Contributing
 
 We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started.

@@ -39,13 +39,7 @@ jobs:
       with:
         node-version: '22'
 
-    - name: Install CLI dependencies
-      if: inputs.update_cli == true
-      run: npm install
-
-    - name: Install extension dependencies
-      if: inputs.update_extension == true
-      working-directory: ./vscode-extension
+    - name: Install workspace dependencies
       run: npm install
 
     - name: Configure Git user
@@ -87,9 +81,9 @@ jobs:
     - name: Update extension dependency reference
       if: inputs.update_cli == true && inputs.update_extension == true
       run: |
-        # Update the file reference to ensure extension uses latest CLI
-        cd vscode-extension
-        npm install ../
+        # With workspace configuration, dependencies are automatically linked
+        # Just ensure the extension package.json has the correct CLI version
+        echo "Workspace dependencies automatically updated"
 
     - name: Update CHANGELOG files
       run: |
