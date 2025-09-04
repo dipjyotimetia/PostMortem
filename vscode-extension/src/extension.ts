@@ -14,7 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
         await generateTestsFromCollectionFile();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        vscode.window.showErrorMessage(`Failed to generate tests: ${errorMessage}`);
+        vscode.window.showErrorMessage(`❌ Failed to generate tests: ${errorMessage}`);
       }
     }
   );
@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
         await generateTestsFromSpecificFile(uri);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        vscode.window.showErrorMessage(`Failed to generate tests: ${errorMessage}`);
+        vscode.window.showErrorMessage(`❌ Failed to generate tests: ${errorMessage}`);
       }
     }
   );
@@ -44,7 +44,7 @@ async function generateTestsFromCollectionFile(): Promise<void> {
     filters: {
       'Postman Collections': ['json']
     },
-    title: 'Select Postman Collection'
+    title: '📋 Select Postman Collection'
   });
 
   if (!collectionFiles || collectionFiles.length === 0) {
@@ -55,15 +55,15 @@ async function generateTestsFromCollectionFile(): Promise<void> {
 
   // Ask for environment file (optional)
   const useEnvironment = await vscode.window.showQuickPick(
-    ['Yes', 'No'],
+    ['✅ Yes', '❌ No'],
     {
-      title: 'Do you have a Postman environment file?',
-      placeHolder: 'Select Yes to include environment variables'
+      title: '🌍 Do you have a Postman environment file?',
+      placeHolder: 'Select Yes to include environment variables for better test accuracy'
     }
   );
 
   let environmentPath: string | undefined;
-  if (useEnvironment === 'Yes') {
+  if (useEnvironment === '✅ Yes') {
     const envFiles = await vscode.window.showOpenDialog({
       canSelectMany: false,
       canSelectFiles: true,
@@ -71,7 +71,7 @@ async function generateTestsFromCollectionFile(): Promise<void> {
       filters: {
         'Postman Environments': ['json']
       },
-      title: 'Select Postman Environment'
+      title: '🌍 Select Postman Environment'
     });
 
     if (envFiles && envFiles.length > 0) {
@@ -94,7 +94,7 @@ async function generateTestsFromCollectionFile(): Promise<void> {
 
 async function generateTestsFromSpecificFile(uri: vscode.Uri): Promise<void> {
   if (!uri || path.extname(uri.fsPath) !== '.json') {
-    vscode.window.showErrorMessage('Please select a JSON file');
+    vscode.window.showErrorMessage('⚠️ Please select a JSON file');
     return;
   }
 
@@ -104,11 +104,11 @@ async function generateTestsFromSpecificFile(uri: vscode.Uri): Promise<void> {
     const collection = JSON.parse(content);
 
     if (!collection.info || !collection.item) {
-      vscode.window.showErrorMessage('Selected file does not appear to be a valid Postman collection');
+      vscode.window.showErrorMessage('⚠️ Selected file does not appear to be a valid Postman collection');
       return;
     }
   } catch {
-    vscode.window.showErrorMessage('Failed to parse JSON file');
+    vscode.window.showErrorMessage('❌ Failed to parse JSON file');
     return;
   }
 
@@ -116,15 +116,15 @@ async function generateTestsFromSpecificFile(uri: vscode.Uri): Promise<void> {
 
   // Ask for environment file (optional)
   const useEnvironment = await vscode.window.showQuickPick(
-    ['Yes', 'No'],
+    ['✅ Yes', '❌ No'],
     {
-      title: 'Do you have a Postman environment file?',
-      placeHolder: 'Select Yes to include environment variables'
+      title: '🌍 Do you have a Postman environment file?',
+      placeHolder: 'Select Yes to include environment variables for better test accuracy'
     }
   );
 
   let environmentPath: string | undefined;
-  if (useEnvironment === 'Yes') {
+  if (useEnvironment === '✅ Yes') {
     const envFiles = await vscode.window.showOpenDialog({
       canSelectMany: false,
       canSelectFiles: true,
@@ -132,7 +132,7 @@ async function generateTestsFromSpecificFile(uri: vscode.Uri): Promise<void> {
       filters: {
         'Postman Environments': ['json']
       },
-      title: 'Select Postman Environment'
+      title: '🌍 Select Postman Environment'
     });
 
     if (envFiles && envFiles.length > 0) {
@@ -166,8 +166,8 @@ async function selectOutputDirectory(): Promise<string | undefined> {
   }
 
   const choice = await vscode.window.showQuickPick(options, {
-    title: 'Where should the tests be generated?',
-    placeHolder: 'Select output directory option'
+    title: '📁 Where should the tests be generated?',
+    placeHolder: 'Choose your preferred output location'
   });
 
   if (!choice) {
@@ -183,7 +183,7 @@ async function selectOutputDirectory(): Promise<string | undefined> {
     canSelectMany: false,
     canSelectFiles: false,
     canSelectFolders: true,
-    title: 'Select Output Directory'
+    title: '📁 Select Output Directory'
   });
 
   if (!customDir || customDir.length === 0) {
@@ -215,25 +215,25 @@ async function generateTests(
 ): Promise<void> {
   return vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
-    title: 'Generating tests from Postman collection...',
+    title: '🚀 Generating tests from Postman collection...',
     cancellable: false
   }, async (progress: vscode.Progress<{message?: string; increment?: number}>) => {
     try {
       // Read collection file
-      progress.report({ message: 'Reading collection file...', increment: 20 });
+      progress.report({ message: '📖 Reading collection file...', increment: 20 });
       const collectionContent = fs.readFileSync(collectionPath, 'utf8');
       const collection = JSON.parse(collectionContent);
 
       // Read environment file if provided
       let environment = null;
       if (environmentPath) {
-        progress.report({ message: 'Reading environment file...', increment: 10 });
+        progress.report({ message: '🌍 Reading environment file...', increment: 10 });
         const environmentContent = fs.readFileSync(environmentPath, 'utf8');
         environment = JSON.parse(environmentContent);
       }
 
       // Initialize converter
-      progress.report({ message: 'Initializing converter...', increment: 10 });
+      progress.report({ message: '⚙️ Initializing converter...', increment: 10 });
       const converter = new PostmanConverter({
         outputDir,
         maintainFolderStructure: config.maintainFolderStructure,
@@ -242,15 +242,15 @@ async function generateTests(
       });
 
       // Generate tests
-      progress.report({ message: 'Converting collection to tests...', increment: 40 });
+      progress.report({ message: '🔄 Converting collection to tests...', increment: 40 });
       const results = await converter.processCollection(collection, outputDir, environment);
 
       // Show success message
-      progress.report({ message: 'Tests generated successfully!', increment: 20 });
+      progress.report({ message: '✅ Tests generated successfully!', increment: 20 });
 
-      const successMessage = `Successfully generated ${results.testFiles} test files${results.folders ? ` in ${results.folders} folders` : ''}`;
+      const successMessage = `🎉 Successfully generated ${results.testFiles} test files${results.folders ? ` in ${results.folders} folders` : ''}`;
 
-      const openFolder = 'Open Test Folder';
+      const openFolder = '📂 Open Test Folder';
       const choice = await vscode.window.showInformationMessage(
         successMessage,
         openFolder
