@@ -83,9 +83,9 @@
     "test": "node ./dist/test/runTest.js"
   },
   "devDependencies": {
-    "@types/glob": "^8.1.0",
+    "@types/glob": "^9.0.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "24.x",
     "@types/sinon": "^17.0.4",
     "@types/vscode": "^1.100.0",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
