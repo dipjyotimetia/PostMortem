@@ -22,15 +22,22 @@ jobs:
 
     - name: Install workspace dependencies
       run: npm ci
+
+    - name: Install Xvfb for headless testing
+      run: sudo apt-get install -y xvfb
       
     - name: Run linter (all packages)
       run: npm run lint
       
     - name: Run tests (all packages)
-      run: npm run test:all
+      run: xvfb-run -a npm run test:all
+      env:
+        DISPLAY: ":99.0"
       
     - name: Run test coverage
-      run: npm run test:coverage
+      run: xvfb-run -a npm run test:coverage
+      env:
+        DISPLAY: ":99.0"
       
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
-declare const suite: (name: string, fn: () => void) => void;
-declare const test: (name: string, fn: () => void | Promise<void>) => void;
+/* global suite, test */
+
 suite('Extension Test Suite', () => {
   test('Extension should be present', () => {
     const extension = vscode.extensions.getExtension('dipjyotimetia.postmortem');
@@ -10,6 +10,12 @@ suite('Extension Test Suite', () => {
   });
 
   test('Commands should be registered', async () => {
+    // Activate the extension first
+    const extension = vscode.extensions.getExtension('dipjyotimetia.postmortem');
+    if (extension && !extension.isActive) {
+      await extension.activate();
+    }
+
     const commands = await vscode.commands.getCommands(true);
 
     assert.ok(commands.includes('postmortem.generateFromCollection'),
