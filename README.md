@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen.svg)](https://nodejs.org/)
-[![npm version](https://badge.fury.io/js/postmortem.svg)](https://badge.fury.io/js/postmortem)
+[![npm version](https://badge.fury.io/js/@dipjyotimetia%2Fpostmortem.svg)](https://badge.fury.io/js/@dipjyotimetia%2Fpostmortem)
 
 Convert Postman collections to complete Mocha/Supertest test frameworks automatically.
 
