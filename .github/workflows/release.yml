@@ -1,0 +1,279 @@
+name: Release from Manual Tag
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.2.4)'
+        required: true
+        type: string
+      create_release:
+        description: 'Create GitHub release'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  # Extract version from release tag or use input
+  extract-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    steps:
+      - id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            # Extract version from release tag (remove 'v' prefix if present)
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION=${VERSION#v}
+            IS_PRERELEASE="${{ github.event.release.prerelease }}"
+          else
+            # Use workflow_dispatch input
+            VERSION="${{ inputs.version }}"
+            IS_PRERELEASE="false"
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          
+          echo "📦 Version to release: $VERSION"
+          echo "🏷️ Is prerelease: $IS_PRERELEASE"
+
+  # Update versions in package.json files
+  update-versions:
+    needs: extract-version
+    runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.update.outputs.updated }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Update package versions
+        id: update
+        run: |
+          VERSION="${{ needs.extract-version.outputs.version }}"
+          
+          # Update CLI package.json
+          echo "📦 Updating CLI package.json to version $VERSION"
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          
+          # Update VSCode extension package.json
+          echo "🔧 Updating VSCode extension package.json to version $VERSION"
+          cd vscode-extension
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          cd ..
+          
+          # Check if there are changes to commit
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit version updates
+        if: steps.update.outputs.updated == 'true'
+        run: |
+          VERSION="${{ needs.extract-version.outputs.version }}"
+          
+          git add package.json vscode-extension/package.json
+          git commit -m "chore: update versions to $VERSION for release"
+          
+          # Create and push version tags
+          git tag "cli-v$VERSION" -m "CLI release $VERSION"
+          git tag "ext-v$VERSION" -m "Extension release $VERSION"
+          
+          git push origin main
+          git push origin --tags
+
+  # Publish CLI to NPM
+  publish-cli:
+    needs: [extract-version, update-versions]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build CLI
+        run: npm run build:cli
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run linting
+        run: npm run lint
+
+      - name: Publish CLI to NPM
+        run: |
+          if [ "${{ needs.extract-version.outputs.is_prerelease }}" == "true" ]; then
+            npm publish --tag beta --provenance --access public
+          else
+            npm publish --provenance --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create CLI release summary
+        run: |
+          echo "📦 **CLI v${{ needs.extract-version.outputs.version }}** published to NPM" >> $GITHUB_STEP_SUMMARY
+          echo "- Install: \`npm install -g @dipjyotimetia/postmortem@${{ needs.extract-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # Publish VSCode Extension to Marketplace
+  publish-extension:
+    needs: [extract-version, update-versions, publish-cli]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Run extension linting
+        working-directory: ./vscode-extension
+        run: npm run lint
+
+      - name: Verify extension build
+        working-directory: ./vscode-extension
+        run: |
+          test -f dist/extension.js
+          echo "✅ Extension build verified"
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package VSCode extension
+        working-directory: ./vscode-extension
+        run: vsce package
+
+      - name: Publish VSCode extension
+        working-directory: ./vscode-extension
+        run: |
+          if [ "${{ needs.extract-version.outputs.is_prerelease }}" == "true" ]; then
+            vsce publish --pre-release
+          else
+            vsce publish
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Upload VSIX as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension-v${{ needs.extract-version.outputs.version }}
+          path: ./vscode-extension/*.vsix
+
+      - name: Create extension release summary
+        run: |
+          echo "🔧 **VSCode Extension v${{ needs.extract-version.outputs.version }}** published to Marketplace" >> $GITHUB_STEP_SUMMARY
+          echo "- Install from VSCode: Search 'PostMortem' in Extensions" >> $GITHUB_STEP_SUMMARY
+
+  # Create GitHub release if triggered by workflow_dispatch
+  create-github-release:
+    needs: [extract-version, publish-cli, publish-extension]
+    if: github.event_name == 'workflow_dispatch' && inputs.create_release == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ needs.extract-version.outputs.version }}"
+          
+          # Create release notes
+          cat > release_notes.md << EOF
+          ## 🚀 Release v$VERSION
+          
+          ### 📦 CLI Package
+          - Published to NPM: [@dipjyotimetia/postmortem@$VERSION](https://www.npmjs.com/package/@dipjyotimetia/postmortem)
+          - Install: \`npm install -g @dipjyotimetia/postmortem@$VERSION\`
+          
+          ### 🔧 VSCode Extension
+          - Published to VS Code Marketplace
+          - Install from VSCode: Search 'PostMortem' in Extensions
+          
+          ### 📝 Changes
+          - Version synchronization across CLI and extension
+          - Improved release automation
+          
+          ---
+          
+          **Full Changelog**: https://github.com/dipjyotimetia/PostMortem/compare/v$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "0.0.0")...v$VERSION
+          EOF
+          
+          # Create the release
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes-file release_notes.md \
+            ./vscode-extension/*.vsix
+
+  # Final summary
+  release-summary:
+    needs: [extract-version, update-versions, publish-cli, publish-extension]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create final summary
+        run: |
+          echo "## 🎉 Release v${{ needs.extract-version.outputs.version }} Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### ✅ Published Packages:" >> $GITHUB_STEP_SUMMARY
+          echo "- **CLI**: [@dipjyotimetia/postmortem@${{ needs.extract-version.outputs.version }}](https://www.npmjs.com/package/@dipjyotimetia/postmortem)" >> $GITHUB_STEP_SUMMARY
+          echo "- **VSCode Extension**: Available in [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=dipjyotimetia.postmortem)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📋 Status:" >> $GITHUB_STEP_SUMMARY
+          echo "- CLI Publish: ${{ needs.publish-cli.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Extension Publish: ${{ needs.publish-extension.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Version Updates: ${{ needs.update-versions.result }}" >> $GITHUB_STEP_SUMMARY
