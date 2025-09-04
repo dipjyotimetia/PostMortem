@@ -76,8 +76,8 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Build all packages
-        run: npm run build
+      - name: Build packages with proper dependencies
+        run: npm run build:with-deps
 
       - name: Run extension linting
         working-directory: ./vscode-extension
@@ -94,8 +94,7 @@ jobs:
         run: npm install -g @vscode/vsce
 
       - name: Package VSCode extension
-        working-directory: ./vscode-extension
-        run: vsce package
+        run: npm run package:extension
 
       - name: Publish VSCode extension
         working-directory: ./vscode-extension

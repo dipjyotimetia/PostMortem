@@ -13,8 +13,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "../lib/*": ["lib/*"]
+    }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "lib/**/*"],
   "exclude": ["node_modules"]
 }

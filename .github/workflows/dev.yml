@@ -1,0 +1,70 @@
+name: Development Build
+
+on:
+  push:
+    branches: [ develop, feature/* ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  dev-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+
+    - name: Install workspace dependencies
+      run: npm ci
+
+    - name: Clean previous builds
+      run: npm run clean
+      
+    - name: Build CLI package first
+      run: npm run build:cli
+      
+    - name: Create CLI package tarball
+      run: npm run package:cli
+      
+    - name: Install CLI package as extension dependency
+      run: npm run install:extension-deps
+      
+    - name: Build extension with dependencies
+      run: npm run build:extension
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Verify builds
+      run: |
+        # Verify CLI build
+        test -f dist/index.js
+        test -f dist/cli.js
+        
+        # Verify extension build
+        test -f vscode-extension/dist/extension.js
+        
+        # Verify extension has proper dependency
+        test -d vscode-extension/node_modules/@dipjyotimetia/postmortem
+        
+        echo "✅ Development build successful"
+        
+    - name: Package extension for testing
+      run: |
+        npm install -g @vscode/vsce
+        npm run package:extension
+        
+    - name: Upload development artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dev-packages
+        path: |
+          *.tgz
+          vscode-extension/*.vsix
+        retention-days: 7

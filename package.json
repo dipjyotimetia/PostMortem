@@ -30,7 +30,15 @@
     "convert:debug": "npm run build:cli && node dist/cli.js -c ./collection/Platzi_postman_collection.json -o ./test-output --debug",
     "build:all": "npm run build",
     "prepublishOnly": "npm run build:cli && npm test && npm run lint",
-    "dev": "ts-node src/cli.ts"
+    "dev": "ts-node src/cli.ts",
+    "setup:dev": "./scripts/setup-dev.sh",
+    "package:cli": "npm pack",
+    "package:extension": "cd vscode-extension && vsce package",
+    "install:extension-deps": "npm run package:cli && cd vscode-extension && npm install ../$(ls ../ | grep dipjyotimetia-postmortem-.*\\.tgz | head -1)",
+    "build:with-deps": "npm run build:cli && npm run install:extension-deps && npm run build:extension",
+    "publish:cli": "npm publish --access public",
+    "publish:extension": "cd vscode-extension && vsce publish",
+    "publish:all": "npm run publish:cli && npm run publish:extension"
   },
   "keywords": [
     "postman",

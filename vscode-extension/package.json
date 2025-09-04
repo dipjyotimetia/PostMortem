@@ -80,7 +80,11 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./dist/test/runTest.js"
+    "test": "node ./dist/test/runTest.js",
+    "package": "vsce package",
+    "install-local": "code --install-extension *.vsix",
+    "clean": "rm -rf dist node_modules *.vsix",
+    "dev-install": "npm run package && npm run install-local"
   },
   "devDependencies": {
     "@types/glob": "^8.1.0",
@@ -98,6 +102,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@dipjyotimetia/postmortem": "*"
+    "@dipjyotimetia/postmortem": "file:../dipjyotimetia-postmortem-1.2.6.tgz"
   }
 }
