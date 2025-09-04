@@ -172,6 +172,12 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
+      - name: Create CLI tarball for extension dependencies
+        run: npm run package:cli
+
+      - name: Install extension dependencies with CLI package
+        run: cd vscode-extension && npm install ../dipjyotimetia-postmortem-*.tgz
+
       - name: Build all packages
         run: npm run build
 
