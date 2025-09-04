@@ -28,6 +28,7 @@
     "node_modules",
     "dist",
     "tests",
-    "test-output"
+    "test-output",
+    "vscode-extension"
   ]
 }
