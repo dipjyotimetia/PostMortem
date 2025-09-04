@@ -1,24 +1,10 @@
-name: Publish CLI and VSCode Extension
+name: Manual Publish CLI and VSCode Extension
 
 on:
-  release:
-    types: [published]
   push:
     tags:
       - 'cli-v*'
       - 'ext-v*'
-  workflow_dispatch:
-    inputs:
-      publish_cli:
-        description: 'Publish CLI package to NPM'
-        required: true
-        default: true
-        type: boolean
-      publish_extension:
-        description: 'Publish VSCode extension to Marketplace'
-        required: true
-        default: true
-        type: boolean
 
 jobs:
   # Determine what should be published based on trigger
@@ -30,20 +16,12 @@ jobs:
     steps:
       - id: check
         run: |
-          if [ "${{ github.event_name }}" == "release" ]; then
+          if [[ "${{ github.ref }}" == refs/tags/cli-v* ]]; then
             echo "publish_cli=true" >> $GITHUB_OUTPUT
+            echo "publish_extension=false" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/ext-v* ]]; then
+            echo "publish_cli=false" >> $GITHUB_OUTPUT
             echo "publish_extension=true" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            if [[ "${{ github.ref }}" == refs/tags/cli-v* ]]; then
-              echo "publish_cli=true" >> $GITHUB_OUTPUT
-              echo "publish_extension=false" >> $GITHUB_OUTPUT
-            elif [[ "${{ github.ref }}" == refs/tags/ext-v* ]]; then
-              echo "publish_cli=false" >> $GITHUB_OUTPUT
-              echo "publish_extension=true" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "publish_cli=${{ inputs.publish_cli }}" >> $GITHUB_OUTPUT
-            echo "publish_extension=${{ inputs.publish_extension }}" >> $GITHUB_OUTPUT
           fi
 
   publish-cli:
