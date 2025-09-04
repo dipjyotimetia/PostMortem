@@ -22,7 +22,7 @@
     "test:watch": "npm test -- --watch",
     "test:coverage": "nyc npm test",
     "test:extension": "cd vscode-extension && npm run lint && npm run test",
-    "test:all": "npm run test && npm run test:extension",
+    "test:all": "npm run test && npm run test --workspace=vscode-extension",
     "lint": "eslint src tests --ext .ts,.js && cd vscode-extension && npm run lint",
     "lint:fix": "eslint src tests --ext .ts,.js --fix",
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' 'src/**/*.js' 'tests/**/*.js' 'vscode-extension/src/**/*.ts'",
