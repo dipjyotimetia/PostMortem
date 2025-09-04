@@ -98,6 +98,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@dipjyotimetia/postmortem": "1.2.6"
+    "@dipjyotimetia/postmortem": "*"
   }
 }
