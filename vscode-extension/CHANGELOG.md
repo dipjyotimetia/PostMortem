@@ -1,3 +1,13 @@
+## [1.2.2] - 2025-09-04
+
+### Changed
+- Version bump to 1.2.2
+
+## [1.2.1] - 2025-09-04
+
+### Changed
+- Version bump to 1.2.1
+
 ## [1.2.0] - 2025-09-03
 
 ### Changed
