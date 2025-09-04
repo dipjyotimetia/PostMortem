@@ -2,7 +2,7 @@
   "name": "postmortem",
   "displayName": "PostMortem - Postman to Tests",
   "description": "🚀 Generate Mocha/Supertest tests from Postman collections with ease",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "publisher": "dipjyotimetia",
   "icon": "icon.png",
   "repository": {
