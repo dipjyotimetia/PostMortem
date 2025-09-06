@@ -1,57 +1,54 @@
+################################################################################
+# Optimized .vscodeignore
+# Only excludes files not needed in the published VS Code extension package.
+# Assumes you run `vsce package` from the `vscode-extension/` directory.
+################################################################################
+
+# Editor & test harness folders
 .vscode/**
 .vscode-test/**
+
+# Source TypeScript (we ship compiled JS in lib/)
 src/**
-.gitignore
-.yarnrc
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/.eslintrc.json
-**/*.map
 **/*.ts
+**/*.map
+
+# Tests & coverage artifacts
+test/**
+tests/**
+**/*.test.*
+**/*.spec.*
+coverage/**
+.nyc_output/**
+
+# Node dev dependencies that are not bundled (vsce will include prod deps automatically)
 node_modules/**
-../node_modules/**
-**/node_modules/**
-**/.git/**
-**/.github/**
-**/tests/**
-**/test/**
-**/coverage/**
-**/.nyc_output/**
-**/dist/cli.js
-**/dist/index.js
-**/dist/index.d.ts
-**/*.test.js
-**/*.spec.js
-**/*.test.ts
-**/*.spec.ts
-../tsconfig.test.json
-../tests/**
-../src/**
-../dist/cli.js
-../dist/index.js
-../dist/index.d.ts
-../CHANGELOG.md
-../CONTRIBUTING.md
-../README.md
-../.eslintrc.js
-../.mocharc.json
-../.nycrc.json
-../.prettierrc.json
-../eslint.config.js
-../package-lock.json
-../collection/**
-../test-output/**
-../dist-tests/**
-../tsconfig.json
-../.DS_Store
-../.gitignore
-../CODE_OF_CONDUCT.md
-../LICENSE
-../WORKFLOW_UPDATES.md
-../WORKSPACE.md
-../package.json
-../.git/**
-../.github/**
-../dist/**
+
+# Git / CI metadata
+.git/**
+.github/**
+
+# Build & config files not required at runtime
+tsconfig.json
+tsconfig.test.json
+*.tsbuildinfo
+eslint.config.js
+.eslintrc.*
+.prettierrc*
+*.log
+*.tgz
+
+# Misc local / OS files
+*.DS_Store
+
+# Optional: keep CHANGELOG, README, LICENSE, icon.png (do NOT ignore)
+# (Intentionally NOT ignoring: README.md, CHANGELOG.md, LICENSE, icon.png, package.json)
+
+# If a future dist/ or out/ build directory is introduced and you only want lib/:
+# out/**
+
+# Prevent accidental inclusion of repository root via symlinks
 ../**
 !../vscode-extension/**
+
+# End of file

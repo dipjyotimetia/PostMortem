@@ -1,23 +1,16 @@
-import * as chai from 'chai';
+import supertest from 'supertest';
+import { expect } from 'chai';
+import 'dotenv/config';
 
-// Set up global test configurations
-process.env.NODE_ENV = 'test';
+// Base URL configuration
+const BASE_URL = process.env.API_BASE_URL || 'https://api.escuelajs.co';
+export const request = supertest(BASE_URL);
 
-// Configure chai
-chai.config.includeStack = true;
-chai.config.showDiff = true;
+// Environment variables from Postman
+export const env = null;
 
-// Increase timeout for integration tests
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
+// Request timeout configuration
+export const DEFAULT_TIMEOUT = process.env.TEST_TIMEOUT || 10000;
 
-// Export for tests that need it
-export const setupTest = function(): void {
-  // Reset any environment variables that might affect tests
-  delete process.env.DEBUG;
-  delete process.env.LOG_LEVEL;
-  delete process.env.API_BASE_URL;
-  delete process.env.TEST_TIMEOUT;
-};
+// Re-export expect for convenience
+export { expect };
