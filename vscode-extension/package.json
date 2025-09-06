@@ -101,7 +101,7 @@
   },
   "dependencies": {
     "@dipjyotimetia/postmortem": "1.2.6",
-    "postman-collection": "5.1.0",
+    "postman-collection": "5.1.1",
     "axios": "^1.11.0",
     "lodash": "^4.17.21",
     "fs-extra": "^11.3.1",
