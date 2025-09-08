@@ -100,7 +100,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@dipjyotimetia/postmortem": "1.2.6",
+    "@dipjyotimetia/postmortem": "1.2.7",
     "postman-collection": "5.1.1",
     "axios": "^1.11.0",
     "lodash": "^4.17.21",
