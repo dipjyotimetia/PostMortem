@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+// Simple logger without external color dependencies
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -33,12 +33,12 @@ export class Logger {
     return levels[level] >= levels[this.level];
   }
 
-  private _log(level: LogLevel, message: string, color: 'gray' | 'cyan' | 'green' | 'yellow' | 'red'): void {
+  private _log(level: LogLevel, message: string): void {
     if (!this._shouldLog(level)) return;
 
     const timestamp = this._getTimestamp();
     const levelStr = level.toUpperCase().padEnd(5);
-    const output = `${timestamp}${chalk[color](`${levelStr}: ${message}`)}`;
+    const output = `${timestamp}${levelStr}: ${message}`;
 
     if (level === 'error') {
       console.error(output);
@@ -48,23 +48,23 @@ export class Logger {
   }
 
   debug(message: string): void {
-    this._log('debug', message, 'gray');
+    this._log('debug', message);
   }
 
   info(message: string): void {
-    this._log('info', message, 'cyan');
+    this._log('info', message);
   }
 
   success(message: string): void {
-    this._log('info', message, 'green');
+    this._log('info', message);
   }
 
   warn(message: string): void {
-    this._log('warn', message, 'yellow');
+    this._log('warn', message);
   }
 
   error(message: string): void {
-    this._log('error', message, 'red');
+    this._log('error', message);
   }
 
   setLevel(level: LogLevel): void {
