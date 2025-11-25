@@ -41,6 +41,58 @@ export interface EnvironmentVariables {
 }
 
 /**
+ * Escapes special characters in strings for safe use in generated JavaScript/TypeScript code
+ * @param str - The string to escape
+ * @returns The escaped string safe for use in single-quoted strings
+ */
+function escapeForJs(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')     // Escape backslashes first
+    .replace(/'/g, "\\'")        // Escape single quotes
+    .replace(/"/g, '\\"')        // Escape double quotes
+    .replace(/\n/g, '\\n')       // Escape newlines
+    .replace(/\r/g, '\\r')       // Escape carriage returns
+    .replace(/\t/g, '\\t')       // Escape tabs
+    .replace(/\$/g, '\\$')       // Escape dollar signs (template literals)
+    .replace(/`/g, '\\`');       // Escape backticks
+}
+
+/**
+ * Sanitizes a test name for safe use in describe/it blocks
+ * @param name - The test name to sanitize
+ * @returns Sanitized test name
+ */
+function sanitizeTestName(name: string): string {
+  // Remove or replace characters that could break string literals
+  return escapeForJs(name.trim());
+}
+
+/**
+ * Sanitizes a URL path for safe use in generated code
+ * @param pathname - The pathname to sanitize
+ * @returns Sanitized pathname
+ */
+function sanitizePath(pathname: string): string {
+  // Escape quotes and backslashes in the path
+  return escapeForJs(pathname);
+}
+
+/**
+ * Extracts error message from unknown error type
+ * @param error - The caught error
+ * @returns Error message string
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return String(error);
+}
+
+/**
  * Generates Mocha test files from Postman requests
  */
 export class TestGenerator {
@@ -61,7 +113,8 @@ export class TestGenerator {
       throw new Error('Request item must have a name');
     }
 
-    const testName = parentName ? `${parentName} - ${item.name}` : item.name;
+    const rawTestName = parentName ? `${parentName} - ${item.name}` : item.name;
+    const testName = sanitizeTestName(rawTestName);
     const request = item.request;
 
     if (!request) {
@@ -69,9 +122,10 @@ export class TestGenerator {
     }
 
     const method = (request.method || 'GET').toLowerCase();
-    const { pathname } = this._extractUrl(request.url, item.name);
+    const { pathname: rawPathname } = this._extractUrl(request.url, item.name);
+    const pathname = sanitizePath(rawPathname);
     const body = this._extractRequestBody(request.body);
-    const _headers = this._extractHeaders(request.header);
+    const headers = this._extractHeaders(request.header);
     const testScript = this._extractTestScript(item.events);
 
     const mochaAssertions = TestConverter.convertPostmanTestToMocha(testScript);
@@ -88,20 +142,21 @@ export class TestGenerator {
 describe('${testName}', function() {
   it('should respond with correct data', async function() {
     const startTime = Date.now();
-    
+
     try {
       const response = await api.${method}('${pathname}'${bodyParam});
-      
+
       // Basic validation
       expectSuccess(response);
       expectResponseTime(startTime, DEFAULT_TIMEOUT);
-      
+
       ${mochaAssertions || '// Add custom assertions here'}
-      
-      console.log('✓ ' + this.test?.title + ' - Status: ' + response.status + ', Time: ' + (Date.now() - startTime) + 'ms');
-      
-    } catch (error: unknown) {
-      console.error('✗ ' + this.test?.title + ' failed:', error.message);
+
+      console.log('Test passed: ' + this.test?.title + ' - Status: ' + response.status + ', Time: ' + (Date.now() - startTime) + 'ms');
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Test failed: ' + this.test?.title + ' - ' + message);
       throw error;
     }
   });
@@ -109,14 +164,14 @@ describe('${testName}', function() {
 `;
     } else {
       // Generate regular test with supertest
-      const requestCode = this._generateRequestCode(method, pathname, body, _headers);
+      const requestCode = this._generateRequestCode(method, pathname, body, headers);
       const defaultAssertion = 'expect(response.status).to.equal(200);';
 
       return `
 describe('${testName}', function() {
   it('should respond with correct data', async function() {
     ${requestCode}
-    
+
     ${mochaAssertions || defaultAssertion}
   });
 });
@@ -140,7 +195,8 @@ describe('${testName}', function() {
       throw new Error('Request item must have a name');
     }
 
-    const testName = parentName ? `${parentName} - ${item.name}` : item.name;
+    const rawTestName = parentName ? `${parentName} - ${item.name}` : item.name;
+    const testName = sanitizeTestName(rawTestName);
     const request = item.request;
 
     if (!request) {
@@ -148,7 +204,8 @@ describe('${testName}', function() {
     }
 
     const method = (request.method || 'GET').toLowerCase();
-    const { pathname } = this._extractUrl(request.url, item.name);
+    const { pathname: rawPathname } = this._extractUrl(request.url, item.name);
+    const pathname = sanitizePath(rawPathname);
     const body = this._extractRequestBody(request.body);
     const testScript = this._extractTestScript(item.events);
 
@@ -179,10 +236,11 @@ describe('${testName}', function() {
     testContent += `      ${assertions}\n`;
     testContent += '      \n';
     testContent += '      // Log response for debugging\n';
-    testContent += '      console.log(\'✓ \' + this.test?.title + \' - Status: \' + response.status + \', Time: \' + (Date.now() - startTime) + \'ms\');\n';
+    testContent += '      console.log(\'Test passed: \' + this.test?.title + \' - Status: \' + response.status + \', Time: \' + (Date.now() - startTime) + \'ms\');\n';
     testContent += '      \n';
-    testContent += '    } catch (error: unknown) {\n';
-    testContent += '      console.error(\'✗ \' + this.test?.title + \' failed:\', error.message);\n';
+    testContent += '    } catch (error) {\n';
+    testContent += '      const message = error instanceof Error ? error.message : String(error);\n';
+    testContent += '      console.error(\'Test failed: \' + this.test?.title + \' - \' + message);\n';
     testContent += '      throw error;\n';
     testContent += '    }\n';
     testContent += '  });\n';
@@ -211,14 +269,15 @@ describe('${testName}', function() {
     switch (method.toUpperCase()) {
     case 'GET':
       if (pathname.includes('/:id') || pathname.match(/\/\d+/)) {
-        const invalidPath = pathname.replace(/\/:\w+|\/\d+/, '/99999');
+        const invalidPath = sanitizePath(pathname.replace(/\/:\w+|\/\d+/, '/99999'));
         tests.push(`it('should handle invalid ID gracefully', async function() {
     try {
       const response = await api.get('${invalidPath}');
       expect(response.status).to.be.oneOf([404, 400]);
-    } catch (error: unknown) {
+    } catch (error) {
       // Expected for invalid IDs
-      expect(error.status).to.be.oneOf([404, 400]);
+      const err = error as { status?: number };
+      expect(err.status).to.be.oneOf([404, 400]);
     }
   });`);
       }
@@ -230,8 +289,9 @@ describe('${testName}', function() {
       const response = await api.post('${pathname}', {});
       // Either succeeds with defaults or fails validation
       expect(response.status).to.be.oneOf([201, 400, 422]);
-    } catch (error: unknown) {
-      expect(error.status).to.be.oneOf([400, 422]);
+    } catch (error) {
+      const err = error as { status?: number };
+      expect(err.status).to.be.oneOf([400, 422]);
     }
   });`);
       break;
@@ -247,13 +307,14 @@ describe('${testName}', function() {
 
     case 'DELETE':
       if (pathname.includes('/:id') || pathname.match(/\/\d+/)) {
-        const invalidPath = pathname.replace(/\/:\w+|\/\d+/, '/99999');
+        const invalidPath = sanitizePath(pathname.replace(/\/:\w+|\/\d+/, '/99999'));
         tests.push(`it('should handle non-existent resource deletion', async function() {
     try {
       const response = await api.delete('${invalidPath}');
       expect(response.status).to.be.oneOf([404, 204]);
-    } catch (error: unknown) {
-      expect(error.status).to.equal(404);
+    } catch (error) {
+      const err = error as { status?: number };
+      expect(err.status).to.equal(404);
     }
   });`);
       }
@@ -314,7 +375,8 @@ describe('${testName}', function() {
 
     return requestHeaders.reduce((acc, header) => {
       if (header.key && header.value && !header.disabled) {
-        acc[header.key] = header.value;
+        // Sanitize header values to prevent injection
+        acc[escapeForJs(header.key)] = escapeForJs(header.value);
       }
       return acc;
     }, {} as Record<string, string>);
@@ -357,7 +419,9 @@ describe('${testName}', function() {
       if (typeof body === 'object') {
         code += `\n        .send(${JSON.stringify(body, null, 2)})`;
       } else {
-        code += `\n        .send('${body}')`;
+        // Escape string body content
+        const escapedBody = escapeForJs(String(body));
+        code += `\n        .send('${escapedBody}')`;
       }
     }
 
@@ -372,6 +436,8 @@ describe('${testName}', function() {
    * @returns Setup file content
    */
   static generateSetupFile(baseUrl: string, environment: EnvironmentVariables | null = null): string {
+    // Sanitize the base URL
+    const sanitizedBaseUrl = escapeForJs(baseUrl);
     const envVars = environment ? JSON.stringify(environment, null, 2) : 'null';
 
     return `import supertest from 'supertest';
@@ -379,14 +445,14 @@ import { expect } from 'chai';
 import 'dotenv/config';
 
 // Base URL configuration
-const BASE_URL = process.env.API_BASE_URL || '${baseUrl}';
+const BASE_URL = process.env.API_BASE_URL || '${sanitizedBaseUrl}';
 export const request = supertest(BASE_URL);
 
 // Environment variables from Postman
 export const env = ${envVars};
 
 // Request timeout configuration
-export const DEFAULT_TIMEOUT = process.env.TEST_TIMEOUT || 10000;
+export const DEFAULT_TIMEOUT = parseInt(process.env.TEST_TIMEOUT || '10000', 10);
 
 // Re-export expect for convenience
 export { expect };

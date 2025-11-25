@@ -4,6 +4,11 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as tmp from 'tmp';
 
+// Read version from package.json
+const packageJsonPath = path.join(__dirname, '../../package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+const expectedVersion = packageJson.version;
+
 interface TmpDir {
   name: string;
   removeCallback: () => void;
@@ -201,7 +206,7 @@ describe('CLI Integration Tests', () => {
     it('should show version', async () => {
       const result = await runCLI(['--version']);
       expect(result.code).to.equal(0);
-      expect(result.stdout).to.include('1.1.0');
+      expect(result.stdout).to.include(expectedVersion);
     });
 
     it('should show help', async () => {

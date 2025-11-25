@@ -1,7 +1,7 @@
 {
   "name": "postmortem",
   "displayName": "PostMortem - Postman to Tests",
-  "description": "🚀 Generate Mocha/Supertest tests from Postman collections with ease",
+  "description": "Generate Mocha/Supertest tests from Postman collections with ease",
   "version": "1.2.8",
   "publisher": "dipjyotimetia",
   "icon": "icon.png",
@@ -24,17 +24,27 @@
     "supertest",
     "api"
   ],
+  "activationEvents": [
+    "onCommand:postmortem.generateFromCollection",
+    "onCommand:postmortem.generateFromFile",
+    "onCommand:postmortem.showOutput"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "postmortem.generateFromCollection",
-        "title": "🧪 Generate Tests from Postman Collection",
+        "title": "Generate Tests from Postman Collection",
         "category": "PostMortem"
       },
       {
         "command": "postmortem.generateFromFile",
-        "title": "⚡ Generate Tests from Collection File",
+        "title": "Generate Tests from Collection File",
+        "category": "PostMortem"
+      },
+      {
+        "command": "postmortem.showOutput",
+        "title": "Show Output Channel",
         "category": "PostMortem"
       }
     ],
