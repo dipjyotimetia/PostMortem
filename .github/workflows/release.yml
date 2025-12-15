@@ -204,7 +204,7 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Upload VSIX as artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: vscode-extension-v${{ needs.extract-version.outputs.version }}
           path: ./vscode-extension/*.vsix
