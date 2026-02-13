@@ -1,11 +1,28 @@
 #!/usr/bin/env node
 
 import * as path from 'path';
+import * as fs from 'fs';
 import { Command } from 'commander';
 import { logger } from './utils/logger';
 import { FileSystem } from './utils/filesystem';
 import { Validator, CLIOptions, PostmanCollection, PostmanEnvironment } from './utils/validator';
 import { PostmanConverter } from './postman-converter';
+
+/**
+ * Reads the version from package.json
+ * @returns The version string from package.json
+ */
+function getVersion(): string {
+  try {
+    // Try to read from the package.json in the root directory
+    const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return packageJson.version || '0.0.0';
+  } catch {
+    // Fallback if package.json cannot be read
+    return '0.0.0';
+  }
+}
 
 /**
  * CLI application for postmortem
@@ -22,7 +39,7 @@ class CLI {
     this.program
       .name('postmortem')
       .description('Convert Postman collections to Mocha/Supertest tests')
-      .version('1.1.0')
+      .version(getVersion())
       .requiredOption('-c, --collection <path>', 'Path to Postman collection JSON file')
       .option('-o, --output <directory>', 'Output directory for the generated test files', './test')
       .option('-e, --environment <path>', 'Path to Postman environment JSON file (optional)')
