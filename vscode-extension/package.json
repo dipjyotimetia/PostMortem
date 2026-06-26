@@ -1,8 +1,8 @@
 {
   "name": "postmortem",
-  "displayName": "PostMortem - Postman to Tests",
-  "description": "🚀 Generate Mocha/Supertest tests from Postman collections with ease",
-  "version": "1.2.8",
+  "displayName": "PostMortem - Postman to Bun Tests",
+  "description": "🚀 Generate Bun-native (bun:test + fetch) API tests from Postman collections",
+  "version": "2.0.0",
   "publisher": "dipjyotimetia",
   "icon": "icon.png",
   "repository": {
@@ -20,8 +20,9 @@
   "keywords": [
     "postman",
     "testing",
-    "mocha",
-    "supertest",
+    "bun",
+    "bun-test",
+    "fetch",
     "api"
   ],
   "main": "./dist/extension.js",
@@ -74,28 +75,25 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run bundle",
-    "build": "npm run bundle",
+    "vscode:prepublish": "bun run bundle",
+    "build": "bun run bundle",
     "compile": "tsc -p ./",
     "bundle": "node esbuild.js",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "pretest": "bun run compile && bun run lint",
+    "lint": "biome check src",
     "test": "node ./dist/test/runTest.js"
   },
   "devDependencies": {
-    "esbuild": "^0.27.0",
     "@types/glob": "^9.0.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "25.x",
+    "@types/node": "^24.0.0",
     "@types/vscode": "^1.100.0",
-    "@typescript-eslint/eslint-plugin": "^8.42.0",
-    "@typescript-eslint/parser": "^8.42.0",
-    "@vscode/test-electron": "^2.4.1",
-    "eslint": "^9.34.0",
-    "glob": "^13.0.0",
-    "mocha": "^11.7.2",
-    "typescript": "^5.9.2"
+    "@vscode/test-electron": "^3.0.0",
+    "esbuild": "^0.28.1",
+    "glob": "^13.0.6",
+    "mocha": "^11.7.6",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@dipjyotimetia/postmortem": "*"

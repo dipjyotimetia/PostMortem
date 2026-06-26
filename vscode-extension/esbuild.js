@@ -9,7 +9,7 @@ async function build() {
     outfile: path.join(__dirname, 'dist', 'extension.js'),
     bundle: true,
     platform: 'node',
-    target: 'node22',
+    target: 'node24',
     format: 'cjs',
     sourcemap: true,
     external: [

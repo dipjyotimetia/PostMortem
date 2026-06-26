@@ -1,10 +1,8 @@
 node_modules
-test-output/
+dist/
+build/
 coverage/
-.nyc_output/
+test-output/
 *.log
 .env
 .DS_Store
-dist/
-build/
-tmp/

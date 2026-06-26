@@ -21,16 +21,16 @@ updates:
           - "*"
         exclude-patterns:
           - "@types/*"
-          - "eslint*"
-          - "prettier"
+          - "@biomejs/*"
+          - "tsup"
           - "typescript"
           - "*test*"
           - "*mock*"
       development-dependencies:
         patterns:
           - "@types/*"
-          - "eslint*"
-          - "prettier"
+          - "@biomejs/*"
+          - "tsup"
           - "typescript"
           - "*test*"
           - "*mock*"
@@ -56,16 +56,16 @@ updates:
           - "*"
         exclude-patterns:
           - "@types/*"
-          - "eslint*"
-          - "prettier"
+          - "@biomejs/*"
+          - "tsup"
           - "typescript"
           - "*test*"
           - "*mock*"
       development-dependencies:
         patterns:
           - "@types/*"
-          - "eslint*"
-          - "prettier"
+          - "@biomejs/*"
+          - "tsup"
           - "typescript"
           - "*test*"
           - "*mock*"

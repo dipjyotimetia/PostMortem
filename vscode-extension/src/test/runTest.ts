@@ -1,5 +1,4 @@
-import * as path from 'path';
-
+import * as path from 'node:path';
 import { runTests } from '@vscode/test-electron';
 
 async function main() {
@@ -16,12 +15,7 @@ async function main() {
     await runTests({
       extensionDevelopmentPath,
       extensionTestsPath,
-      launchArgs: [
-        '--headless',
-        '--disable-extensions',
-        '--disable-web-security',
-        '--no-sandbox'
-      ]
+      launchArgs: ['--headless', '--disable-extensions', '--disable-web-security', '--no-sandbox']
     });
   } catch (err) {
     console.error('Failed to run tests', err);

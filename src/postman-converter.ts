@@ -1,11 +1,15 @@
+import * as path from 'node:path';
 import * as sdk from 'postman-collection';
-import * as path from 'path';
-import * as _ from 'lodash';
-import { logger } from './utils/logger';
-import { FileSystem } from './utils/filesystem';
-import { Validator, PostmanCollection, PostmanEnvironment } from './utils/validator';
-import { TestGenerator, EnvironmentVariables } from './converters/test-generator';
 import { ProjectGenerator } from './converters/project-generator';
+import {
+  type EnvironmentVariables,
+  type PostmanItem,
+  TestGenerator
+} from './converters/test-generator';
+import { FileSystem } from './utils/filesystem';
+import { logger } from './utils/logger';
+import { kebabCase } from './utils/strings';
+import { type PostmanCollection, type PostmanEnvironment, Validator } from './utils/validator';
 
 export interface PostmanConverterOptions {
   outputDir?: string;
@@ -24,6 +28,40 @@ export interface ProcessingResults {
 export interface InternalProcessingResults {
   testFiles: number;
   folders: number;
+}
+
+/**
+ * Minimal structural types describing the parts of the `postman-collection`
+ * SDK objects this converter actually reads. The SDK ships without bundled
+ * type declarations, so these keep the SDK boundary explicit instead of `any`.
+ */
+interface SdkList<T> {
+  members?: T[];
+  all?: () => T[];
+}
+
+interface SdkItem {
+  name: string;
+  request?: { url?: unknown; method?: string };
+  items?: SdkList<SdkItem>;
+}
+
+interface SdkItemGroup {
+  items?: SdkList<SdkItem>;
+}
+
+interface SdkVariable {
+  key?: string;
+  value?: string;
+}
+
+interface SdkVariableScope {
+  values?: SdkList<SdkVariable>;
+}
+
+/** Read the members of an SDK list regardless of representation. */
+function listMembers<T>(list?: SdkList<T>): T[] {
+  return list?.members ?? list?.all?.() ?? [];
 }
 
 /**
@@ -62,8 +100,8 @@ export class PostmanConverter {
       throw new Error(`Invalid collection: ${collectionValidation.errors.join(', ')}`);
     }
 
-    if (collectionValidation.warnings.length > 0) {
-      collectionValidation.warnings.forEach(warning => logger.warn(warning));
+    for (const warning of collectionValidation.warnings) {
+      logger.warn(warning);
     }
 
     if (rawEnvironment) {
@@ -71,18 +109,19 @@ export class PostmanConverter {
       if (!envValidation.isValid) {
         throw new Error(`Invalid environment: ${envValidation.errors.join(', ')}`);
       }
-      if (envValidation.warnings.length > 0) {
-        envValidation.warnings.forEach(warning => logger.warn(warning));
+      for (const warning of envValidation.warnings) {
+        logger.warn(warning);
       }
     }
 
     // Convert to SDK objects
-    const collection = new sdk.Collection(rawCollection as any);
-    const environment = rawEnvironment ? new sdk.VariableScope(rawEnvironment) : null;
+    const collection = new sdk.Collection(rawCollection) as SdkItemGroup;
+    const environment = rawEnvironment
+      ? (new sdk.VariableScope(rawEnvironment) as SdkVariableScope)
+      : null;
 
     if (environment) {
-      const envValues = environment.values as any;
-      logger.info(`Found environment with ${envValues?.members?.length || 0} variables`);
+      logger.info(`Found environment with ${listMembers(environment.values).length} variables`);
     }
 
     // Ensure output directory exists
@@ -128,8 +167,8 @@ export class PostmanConverter {
       logger.info('');
       logger.info('🚀 Quick start:');
       logger.info(`   cd ${path.basename(outputDir)}`);
-      logger.info('   npm install');
-      logger.info('   npm test');
+      logger.info('   bun install');
+      logger.info('   bun test');
 
       return {
         testFiles: results.testFiles,
@@ -161,16 +200,14 @@ export class PostmanConverter {
    * Extract base URL from collection
    * @private
    */
-  private _extractBaseUrl(collection: sdk.Collection): string {
-    const items = collection.items as any;
-    if (!items?.members?.length) {
+  private _extractBaseUrl(collection: SdkItemGroup): string {
+    if (listMembers(collection.items).length === 0) {
       logger.warn('Collection has no items, using default base URL');
       return 'https://api.example.com';
     }
 
-    const findFirstUrl = (itemGroup: any): string | null => {
-      const members = (itemGroup as any).items?.members || (itemGroup as any).items?.all?.() || [];
-      for (const item of members) {
+    const findFirstUrl = (itemGroup: SdkItemGroup): string | null => {
+      for (const item of listMembers(itemGroup.items)) {
         if (item.request?.url) {
           try {
             const url = item.request.url.toString();
@@ -185,7 +222,9 @@ export class PostmanConverter {
 
         if (item.items) {
           const url = findFirstUrl(item);
-          if (url) return url;
+          if (url) {
+            return url;
+          }
         }
       }
       return null;
@@ -203,19 +242,19 @@ export class PostmanConverter {
    * Extract environment variables from Postman environment
    * @private
    */
-  private _extractEnvironmentVariables(environment: sdk.VariableScope): EnvironmentVariables {
-    const envValues = environment.values as any;
-    if (!envValues?.members?.length) {
+  private _extractEnvironmentVariables(environment: SdkVariableScope): EnvironmentVariables {
+    const members = listMembers(environment.values);
+    if (members.length === 0) {
       logger.debug('No environment variables found');
       return {};
     }
 
-    const variables = envValues.members.reduce((acc: EnvironmentVariables, variable: any) => {
+    const variables: EnvironmentVariables = {};
+    for (const variable of members) {
       if (variable.key && variable.value) {
-        acc[variable.key] = variable.value;
+        variables[variable.key] = variable.value;
       }
-      return acc;
-    }, {} as EnvironmentVariables);
+    }
 
     logger.debug(`Extracted ${Object.keys(variables).length} environment variables`);
     return variables;
@@ -226,13 +265,13 @@ export class PostmanConverter {
    * @private
    */
   private async _processItems(
-    itemGroup: any,
+    itemGroup: SdkItemGroup,
     outputDir: string,
     parentPath: string = '',
     level: number = 0
   ): Promise<InternalProcessingResults> {
-    const items = (itemGroup as any)?.items?.members || (itemGroup as any)?.items?.all?.() || [];
-    if (!items || items.length === 0) {
+    const items = listMembers(itemGroup.items);
+    if (items.length === 0) {
       logger.warn(`${' '.repeat(level * 2)}No items found in group`);
       return { testFiles: 0, folders: 0 };
     }
@@ -242,10 +281,10 @@ export class PostmanConverter {
     let folders = 0;
 
     for (const item of items) {
-      const itemItems = item.items?.members || item.items?.all?.() || [];
+      const itemItems = listMembers(item.items);
       if (item.items && itemItems.length > 0) {
         // This is a folder
-        const folderName = _.kebabCase(item.name);
+        const folderName = kebabCase(item.name);
         const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
 
         logger.info(`${indent}Processing folder: ${item.name}`);
@@ -265,7 +304,6 @@ export class PostmanConverter {
 
         testFiles += results.testFiles;
         folders += results.folders + 1;
-
       } else if (item.request) {
         // This is a request - generate test file
         await this._generateTestFile(item, outputDir, parentPath, indent);
@@ -281,12 +319,12 @@ export class PostmanConverter {
    * @private
    */
   private async _generateTestFile(
-    item: sdk.Item,
+    item: SdkItem,
     outputDir: string,
     parentPath: string,
     indent: string
   ): Promise<void> {
-    const fileName = `${_.kebabCase(item.name)}.test.ts`;
+    const fileName = `${kebabCase(item.name)}.test.ts`;
     const filePath = parentPath
       ? path.join(outputDir, parentPath, fileName)
       : path.join(outputDir, fileName);
@@ -315,12 +353,16 @@ export class PostmanConverter {
 
       // Use enhanced generation for full projects
       const options = this.options.generateFullProject ? { enhanced: true } : {};
-      const testContent = TestGenerator.generateMochaTestFromRequest(item as any, parentName || '', options);
+      const testContent = TestGenerator.generateTestFromRequest(
+        item as unknown as PostmanItem,
+        parentName || '',
+        options
+      );
 
       // Use different imports for full projects
       const imports = this.options.generateFullProject
-        ? `import { api, expect, expectSuccess, expectResponseTime, DEFAULT_TIMEOUT } from '${setupPath}';`
-        : `import { request, expect } from '${setupPath}';`;
+        ? `import { describe, it, expect } from 'bun:test';\nimport { api, expectSuccess, expectResponseTime, DEFAULT_TIMEOUT } from '${setupPath}';`
+        : `import { describe, it, expect } from 'bun:test';\nimport { request } from '${setupPath}';`;
 
       const fileContent = `${imports}
 
@@ -328,9 +370,10 @@ ${testContent}`;
 
       await FileSystem.writeFile(filePath, fileContent);
       logger.success(`${indent}Created test file: ${filePath}`);
-
     } catch (error) {
-      logger.error(`${indent}Failed to generate test file for "${item.name}": ${(error as Error).message}`);
+      logger.error(
+        `${indent}Failed to generate test file for "${item.name}": ${(error as Error).message}`
+      );
       throw error;
     }
   }
@@ -339,29 +382,31 @@ ${testContent}`;
    * Generate enhanced setup file for full project
    * @private
    */
-  private _generateEnhancedSetup(baseUrl: string, environment: EnvironmentVariables | null = null): string {
+  private _generateEnhancedSetup(
+    baseUrl: string,
+    environment: EnvironmentVariables | null = null
+  ): string {
     const envVarsComment = environment
       ? `// Environment variables from Postman collection\n${Object.entries(environment)
-        .map(([key, value]) => `// ${key}=${value}`)
-        .join('\n')}`
+          .map(([key, value]) => `// ${key}=${value}`)
+          .join('\n')}`
       : '// No environment variables from Postman collection';
 
-    return `import 'dotenv/config';
-import { expect } from 'chai';
+    return `import { expect } from 'bun:test';
 import { ApiClient } from './helpers/api-client';
 import * as testHelpers from './helpers/test-helpers';
 
-// Configuration
-const BASE_URL = process.env.API_BASE_URL || '${baseUrl}';
-const API_TIMEOUT = parseInt(process.env.API_TIMEOUT || '30000');
-export const DEFAULT_TIMEOUT = parseInt(process.env.TEST_TIMEOUT || '30000');
+// Configuration (Bun auto-loads .env)
+const BASE_URL = process.env.API_BASE_URL ?? '${baseUrl}';
+const API_TIMEOUT = Number(process.env.API_TIMEOUT ?? 30000);
+export const DEFAULT_TIMEOUT = Number(process.env.TEST_TIMEOUT ?? 30000);
 
 // Initialize API client
 export const api = new ApiClient({
   baseURL: BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
-    'User-Agent': 'postmortem-API-Tests/1.0.0'
+    'User-Agent': 'postmortem-api-tests/2.0.0'
   }
 });
 
@@ -382,18 +427,8 @@ export const {
   expectDeleted
 } = testHelpers;
 
-// Re-export expect for compatibility
+// Re-export expect for convenience
 export { expect };
-
-// Global test setup
-before(function() {
-  console.log(\`🚀 Starting API tests against: \${BASE_URL}\`);
-  console.log(\`⏱️  Default timeout: \${DEFAULT_TIMEOUT}ms\`);
-});
-
-after(function() {
-  console.log('✅ API tests completed');
-});
 
 // Helper functions
 export function setAuthToken(token: string): void {
@@ -410,16 +445,6 @@ export function setBaseURL(url: string): void {
 
 ${envVarsComment}
 export const env = process.env;
-
-export default {
-  api,
-  expect,
-  setAuthToken,
-  clearAuth,
-  setBaseURL,
-  env,
-  ...testHelpers
-};
 `;
   }
 }

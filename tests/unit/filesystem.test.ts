@@ -1,137 +1,106 @@
-import { expect } from 'chai';
-import * as path from 'path';
-import * as fs from 'fs-extra';
-import * as tmp from 'tmp';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import * as path from 'node:path';
 import { FileSystem } from '../../src/utils/filesystem';
+import { makeTmpDir, removeTmpDir } from '../helpers/tmp';
 
-interface TmpDir {
-  name: string;
-  removeCallback: () => void;
-}
+const exists = async (target: string): Promise<boolean> => {
+  try {
+    await stat(target);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 describe('FileSystem', () => {
-  let tmpDir: TmpDir;
+  let tmpDir: string;
 
-  beforeEach(() => {
-    tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  beforeEach(async () => {
+    tmpDir = await makeTmpDir();
   });
 
-  afterEach(() => {
-    if (tmpDir) {
-      tmpDir.removeCallback();
-    }
+  afterEach(async () => {
+    await removeTmpDir(tmpDir);
   });
 
   describe('readJsonFile', () => {
-    it('should read and parse valid JSON file', async () => {
+    it('should read and parse a valid JSON file', async () => {
       const testData = { name: 'test', value: 123 };
-      const filePath = path.join(tmpDir.name, 'test.json');
-      await fs.writeFile(filePath, JSON.stringify(testData));
+      const filePath = path.join(tmpDir, 'test.json');
+      await writeFile(filePath, JSON.stringify(testData));
 
-      const result = await FileSystem.readJsonFile(filePath);
-      expect(result).to.deep.equal(testData);
+      expect(await FileSystem.readJsonFile(filePath)).toEqual(testData);
     });
 
-    it('should throw error for non-existent file', async () => {
-      const filePath = path.join(tmpDir.name, 'nonexistent.json');
-
-      try {
-        await FileSystem.readJsonFile(filePath);
-        expect.fail('Should have thrown error');
-      } catch (error: unknown) {
-        expect((error as Error).message).to.include('File not found');
-      }
+    it('should throw for a non-existent file', async () => {
+      const filePath = path.join(tmpDir, 'nonexistent.json');
+      await expect(FileSystem.readJsonFile(filePath)).rejects.toThrow('File not found');
     });
 
-    it('should throw error for invalid JSON', async () => {
-      const filePath = path.join(tmpDir.name, 'invalid.json');
-      await fs.writeFile(filePath, '{ invalid json }');
-
-      try {
-        await FileSystem.readJsonFile(filePath);
-        expect.fail('Should have thrown error');
-      } catch (error: unknown) {
-        expect((error as Error).message).to.include('Invalid JSON');
-      }
+    it('should throw for invalid JSON', async () => {
+      const filePath = path.join(tmpDir, 'invalid.json');
+      await writeFile(filePath, '{ invalid json }');
+      await expect(FileSystem.readJsonFile(filePath)).rejects.toThrow('Invalid JSON');
     });
   });
 
   describe('writeFile', () => {
-    it('should write file successfully', async () => {
-      const filePath = path.join(tmpDir.name, 'output.txt');
-      const content = 'test content';
-
-      await FileSystem.writeFile(filePath, content);
-
-      const result = await fs.readFile(filePath, 'utf8');
-      expect(result).to.equal(content);
+    it('should write a file successfully', async () => {
+      const filePath = path.join(tmpDir, 'output.txt');
+      await FileSystem.writeFile(filePath, 'test content');
+      expect(await readFile(filePath, 'utf8')).toBe('test content');
     });
 
-    it('should create directories if they don\'t exist', async () => {
-      const filePath = path.join(tmpDir.name, 'nested', 'dir', 'file.txt');
-      const content = 'test content';
-
-      await FileSystem.writeFile(filePath, content);
-
-      const result = await fs.readFile(filePath, 'utf8');
-      expect(result).to.equal(content);
+    it('should create parent directories if they do not exist', async () => {
+      const filePath = path.join(tmpDir, 'nested', 'dir', 'file.txt');
+      await FileSystem.writeFile(filePath, 'test content');
+      expect(await readFile(filePath, 'utf8')).toBe('test content');
     });
   });
 
   describe('ensureDir', () => {
-    it('should create directory if it doesn\'t exist', async () => {
-      const dirPath = path.join(tmpDir.name, 'new-directory');
-
+    it('should create a directory if it does not exist', async () => {
+      const dirPath = path.join(tmpDir, 'new-directory');
       await FileSystem.ensureDir(dirPath);
-
-      const exists = await fs.pathExists(dirPath);
-      expect(exists).to.be.true;
+      expect(await exists(dirPath)).toBe(true);
     });
 
-    it('should not fail if directory already exists', async () => {
-      const dirPath = path.join(tmpDir.name, 'existing-dir');
-      await fs.ensureDir(dirPath);
-
-      // Should not throw
+    it('should not fail if the directory already exists', async () => {
+      const dirPath = path.join(tmpDir, 'existing-dir');
+      await mkdir(dirPath, { recursive: true });
       await FileSystem.ensureDir(dirPath);
-
-      const exists = await fs.pathExists(dirPath);
-      expect(exists).to.be.true;
+      expect(await exists(dirPath)).toBe(true);
     });
   });
 
   describe('exists', () => {
-    it('should return true for existing file', async () => {
-      const filePath = path.join(tmpDir.name, 'exists.txt');
-      await fs.writeFile(filePath, 'content');
-
-      const exists = await FileSystem.exists(filePath);
-      expect(exists).to.be.true;
+    it('should return true for an existing file', async () => {
+      const filePath = path.join(tmpDir, 'exists.txt');
+      await writeFile(filePath, 'content');
+      expect(await FileSystem.exists(filePath)).toBe(true);
     });
 
-    it('should return false for non-existing file', async () => {
-      const filePath = path.join(tmpDir.name, 'nonexistent.txt');
-
-      const exists = await FileSystem.exists(filePath);
-      expect(exists).to.be.false;
+    it('should return false for a non-existing file', async () => {
+      expect(await FileSystem.exists(path.join(tmpDir, 'nonexistent.txt'))).toBe(false);
     });
   });
 
   describe('getRelativePath', () => {
-    it('should return correct relative path', () => {
-      const from = '/Users/test/project/src';
-      const to = '/Users/test/project/lib/utils.js';
-
-      const result = FileSystem.getRelativePath(from, to);
-      expect(result).to.equal('../lib/utils.js');
+    it('should return the correct relative path', () => {
+      const result = FileSystem.getRelativePath(
+        '/Users/test/project/src',
+        '/Users/test/project/lib/utils.js'
+      );
+      expect(result).toBe('../lib/utils.js');
     });
 
     it('should normalize path separators', () => {
-      const from = 'C:\\Users\\test\\project\\src';
-      const to = 'C:\\Users\\test\\project\\lib\\utils.js';
-
-      const result = FileSystem.getRelativePath(from, to);
-      expect(result).to.include('/'); // Should use forward slashes
+      const result = FileSystem.getRelativePath(
+        'C:\\Users\\test\\project\\src',
+        'C:\\Users\\test\\project\\lib\\utils.js'
+      );
+      expect(result).toContain('/');
     });
   });
 });

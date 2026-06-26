@@ -1,7 +1,7 @@
-import * as path from 'path';
-import { EnvironmentVariables } from './test-generator';
+import * as path from 'node:path';
 import { FileSystem } from '../utils/filesystem';
 import { logger } from '../utils/logger';
+import type { EnvironmentVariables } from './test-generator';
 
 export interface ProjectOptions {
   projectName: string;
@@ -11,103 +11,65 @@ export interface ProjectOptions {
 }
 
 /**
- * Generates a complete API test framework project
+ * Generates a complete Bun-native API test framework project.
  */
 export class ProjectGenerator {
   /**
-   * Generate a complete test project with all configuration files
+   * Generate a complete test project with all configuration files.
    * @param options - Project generation options
    */
   static async generateProject(options: ProjectOptions): Promise<void> {
-    const { projectName, baseUrl, environment, outputDir } = options;
+    const { projectName, environment, outputDir } = options;
 
     logger.info(`Generating complete API test framework project: ${projectName}`);
 
-    // Create project structure
-    await this._createProjectStructure(outputDir);
-
-    // Generate configuration files
-    await this._generatePackageJson(outputDir, projectName, baseUrl);
-    await this._generateTsConfig(outputDir);
-    await this._generateMochaConfig(outputDir);
-    await this._generateEnvironmentFiles(outputDir, environment);
-    await this._generateReadme(outputDir, projectName);
-    await this._generateGitIgnore(outputDir);
-
-    // Generate helper files
-    await this._generateHelperFiles(outputDir, baseUrl, environment);
+    await ProjectGenerator._createProjectStructure(outputDir);
+    await ProjectGenerator._generatePackageJson(outputDir, projectName);
+    await ProjectGenerator._generateTsConfig(outputDir);
+    await ProjectGenerator._generateBunfig(outputDir);
+    await ProjectGenerator._generateEnvironmentFiles(outputDir, environment);
+    await ProjectGenerator._generateReadme(outputDir, projectName);
+    await ProjectGenerator._generateGitIgnore(outputDir);
+    await ProjectGenerator._generateHelperFiles(outputDir);
 
     logger.success(`Complete API test project generated in: ${outputDir}`);
   }
 
   /**
-   * Create the basic project directory structure
+   * Create the basic project directory structure.
    * @private
    */
   private static async _createProjectStructure(outputDir: string): Promise<void> {
-    const dirs = [
-      'src',
-      'src/tests',
-      'src/helpers',
-      'src/utils',
-      'src/config',
-      'reports'
-    ];
-
+    const dirs = ['src', 'src/tests', 'src/helpers'];
     for (const dir of dirs) {
       await FileSystem.ensureDir(path.join(outputDir, dir));
     }
-
     logger.debug('Created project directory structure');
   }
 
   /**
-   * Generate package.json with all necessary dependencies
+   * Generate package.json for a Bun test project.
    * @private
    */
-  private static async _generatePackageJson(
-    outputDir: string,
-    projectName: string,
-    _baseUrl: string
-  ): Promise<void> {
+  private static async _generatePackageJson(outputDir: string, projectName: string): Promise<void> {
     const packageJson = {
       name: projectName.toLowerCase().replace(/\s+/g, '-'),
       version: '1.0.0',
       description: `API test framework for ${projectName}`,
-      main: 'dist/index.js',
-      types: 'dist/index.d.ts',
+      type: 'module',
+      private: true,
       scripts: {
-        'build': 'tsc',
-        'build:watch': 'tsc --watch',
-        'clean': 'rm -rf dist reports/*',
-        'prebuild': 'npm run clean',
-        'test': 'npm run build && mocha dist/tests/**/*.test.js --require dist/setup.js',
-        'test:watch': 'npm run build && mocha dist/tests/**/*.test.js --require dist/setup.js --watch',
-        'test:report': 'npm run build && mocha dist/tests/**/*.test.js --require dist/setup.js --reporter mochawesome --reporter-options reportDir=reports',
-        'lint': 'eslint src --ext .ts',
-        'lint:fix': 'eslint src --ext .ts --fix',
-        'start': 'npm test'
-      },
-      dependencies: {
-        'supertest': '^7.0.0',
-        'chai': '^5.2.0',
-        'dotenv': '^16.4.7',
-        'axios': '^1.7.0',
-        'lodash': '^4.17.21'
+        test: 'bun test',
+        'test:watch': 'bun test --watch',
+        'test:coverage': 'bun test --coverage',
+        typecheck: 'tsc --noEmit'
       },
       devDependencies: {
-        '@types/chai': '^5.2.2',
-        '@types/mocha': '^10.0.10',
-        '@types/node': '^24.0.1',
-        '@types/supertest': '^6.0.3',
-        '@types/lodash': '^4.17.17',
-        'typescript': '^5.8.3',
-        'mocha': '^11.1.0',
-        'mochawesome': '^7.1.3',
-        'eslint': '^9.17.0'
+        '@types/bun': '^1.3.0',
+        typescript: '^5.7.0'
       },
       engines: {
-        node: '>=18.0.0'
+        bun: '>=1.2.0'
       }
     };
 
@@ -115,159 +77,151 @@ export class ProjectGenerator {
       path.join(outputDir, 'package.json'),
       JSON.stringify(packageJson, null, 2)
     );
-
     logger.debug('Generated package.json');
   }
 
   /**
-   * Generate TypeScript configuration
+   * Generate TypeScript configuration (Bun preset).
    * @private
    */
   private static async _generateTsConfig(outputDir: string): Promise<void> {
     const tsConfig = {
       compilerOptions: {
-        target: 'ES2022',
-        module: 'CommonJS',
-        lib: ['ES2022'],
-        outDir: './dist',
-        rootDir: './src',
+        target: 'ESNext',
+        module: 'Preserve',
+        moduleResolution: 'bundler',
+        lib: ['ESNext'],
+        types: ['bun'],
         strict: true,
         esModuleInterop: true,
         skipLibCheck: true,
-        forceConsistentCasingInFileNames: true,
-        moduleResolution: 'node',
         resolveJsonModule: true,
-        declaration: true,
-        sourceMap: true
+        noEmit: true
       },
-      include: [
-        'src/**/*'
-      ],
-      exclude: [
-        'node_modules',
-        'dist',
-        'reports'
-      ]
+      include: ['src']
     };
 
     await FileSystem.writeFile(
       path.join(outputDir, 'tsconfig.json'),
       JSON.stringify(tsConfig, null, 2)
     );
-
     logger.debug('Generated tsconfig.json');
   }
 
   /**
-   * Generate Mocha configuration
+   * Generate bunfig.toml.
    * @private
    */
-  private static async _generateMochaConfig(outputDir: string): Promise<void> {
-    const mochaConfig = {
-      reporter: 'spec',
-      timeout: 30000,
-      recursive: true,
-      exit: true
-    };
-
-    await FileSystem.writeFile(
-      path.join(outputDir, '.mocharc.json'),
-      JSON.stringify(mochaConfig, null, 2)
-    );
-
-    logger.debug('Generated .mocharc.json');
+  private static async _generateBunfig(outputDir: string): Promise<void> {
+    const bunfig = `[test]
+coverageReporter = ["text"]
+`;
+    await FileSystem.writeFile(path.join(outputDir, 'bunfig.toml'), bunfig);
+    logger.debug('Generated bunfig.toml');
   }
 
   /**
-   * Generate environment configuration files
+   * Generate environment configuration files.
    * @private
    */
   private static async _generateEnvironmentFiles(
     outputDir: string,
     environment: EnvironmentVariables | null
   ): Promise<void> {
-    // Generate .env.example
-    const envExample = '# API Configuration\nAPI_BASE_URL=https://api.example.com\nAPI_TIMEOUT=30000\n\n# Test Configuration\nTEST_TIMEOUT=30000\n\n# Environment\nNODE_ENV=test\n';
+    const envExample =
+      '# API Configuration\nAPI_BASE_URL=https://api.example.com\nAPI_TIMEOUT=30000\n\n# Test Configuration\nTEST_TIMEOUT=30000\n\n# Environment\nNODE_ENV=test\n';
 
     await FileSystem.writeFile(path.join(outputDir, '.env.example'), envExample);
 
-    // Generate actual .env file
     let envContent = envExample;
     if (environment) {
       const envVars = Object.entries(environment)
         .map(([key, value]) => `${key}=${value}`)
         .join('\n');
-
       envContent = `# Generated from Postman environment\n${envVars}\n\n${envExample}`;
     }
 
     await FileSystem.writeFile(path.join(outputDir, '.env'), envContent);
-
     logger.debug('Generated environment files');
   }
 
   /**
-   * Generate project README
+   * Generate the project README.
    * @private
    */
   private static async _generateReadme(outputDir: string, projectName: string): Promise<void> {
-    const readme = `# ${projectName} - API Test Framework\n\n` +
-      'This is an automatically generated API test framework created with postmortem.\n\n' +
-      '## Quick Start\n\n' +
-      '1. Install dependencies:\n```bash\nnpm install\n```\n\n' +
-      '2. Update .env with your API configuration\n\n' +
-      '3. Run tests:\n```bash\nnpm test\n```\n\n' +
-      '## Scripts\n\n' +
-      '- `npm test` - Run all tests\n' +
-      '- `npm run test:watch` - Run tests in watch mode\n' +
-      '- `npm run test:report` - Generate HTML test report\n' +
-      '- `npm run build` - Build TypeScript\n' +
-      '- `npm run lint` - Lint code\n\n' +
-      '## Generated Files\n\n' +
-      'This project was generated from a Postman collection. Test files in `src/tests/` correspond to your Postman requests.\n';
+    const readme = `# ${projectName} - API Test Framework
+
+This is an automatically generated, Bun-native API test framework created with postmortem.
+
+## Quick Start
+
+1. Install dependencies:
+\`\`\`bash
+bun install
+\`\`\`
+
+2. Update \`.env\` with your API configuration (Bun loads it automatically).
+
+3. Run tests:
+\`\`\`bash
+bun test
+\`\`\`
+
+## Scripts
+
+- \`bun test\` - Run all tests
+- \`bun test --watch\` - Run tests in watch mode
+- \`bun test --coverage\` - Run tests with coverage
+- \`bun run typecheck\` - Type-check the project
+
+## Generated Files
+
+This project was generated from a Postman collection. Test files in \`src/tests/\`
+correspond to your Postman requests and use \`bun:test\` with the native \`fetch\` API.
+`;
 
     await FileSystem.writeFile(path.join(outputDir, 'README.md'), readme);
     logger.debug('Generated README.md');
   }
 
   /**
-   * Generate .gitignore file
+   * Generate the .gitignore file.
    * @private
    */
   private static async _generateGitIgnore(outputDir: string): Promise<void> {
-    const gitignore = '# Dependencies\nnode_modules/\n\n# Build outputs\ndist/\n\n# Test reports\nreports/\n\n# Environment files\n.env\n\n# IDE files\n.vscode/\n.idea/\n\n# OS files\n.DS_Store\n\n# Logs\n*.log\n';
-
+    const gitignore =
+      '# Dependencies\nnode_modules/\n\n# Coverage\ncoverage/\n\n# Environment files\n.env\n\n# IDE files\n.vscode/\n.idea/\n\n# OS files\n.DS_Store\n\n# Logs\n*.log\n';
     await FileSystem.writeFile(path.join(outputDir, '.gitignore'), gitignore);
     logger.debug('Generated .gitignore');
   }
 
   /**
-   * Generate all helper files for the project
+   * Generate the API client and assertion helpers.
    * @private
    */
-  private static async _generateHelperFiles(
-    outputDir: string,
-    baseUrl: string,
-    environment: EnvironmentVariables | null
-  ): Promise<void> {
-    await this._generateSimpleHelpers(outputDir);
-    await this._generateEnhancedSetup(outputDir, baseUrl, environment);
-
+  private static async _generateHelperFiles(outputDir: string): Promise<void> {
+    await FileSystem.writeFile(
+      path.join(outputDir, 'src', 'helpers', 'api-client.ts'),
+      ProjectGenerator._apiClientSource()
+    );
+    await FileSystem.writeFile(
+      path.join(outputDir, 'src', 'helpers', 'test-helpers.ts'),
+      ProjectGenerator._testHelpersSource()
+    );
     logger.debug('Generated helper files');
   }
 
   /**
-   * Generate simplified helper files as fallback
+   * Source for the generated fetch-based API client.
    * @private
    */
-  private static async _generateSimpleHelpers(outputDir: string): Promise<void> {
-    const apiClientContent = `import axios, { AxiosInstance, AxiosResponse, AxiosRequestConfig } from 'axios';
-
-export interface ApiResponse<T = any> {
+  private static _apiClientSource(): string {
+    return `export interface ApiResponse<T = unknown> {
   data: T;
   status: number;
   statusText: string;
-  headers: any;
+  headers: Headers;
 }
 
 export interface ApiClientConfig {
@@ -276,386 +230,234 @@ export interface ApiClientConfig {
   headers?: Record<string, string>;
 }
 
+/**
+ * Error thrown for non-2xx responses (so tests can assert on \`error.status\`).
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly data: unknown;
+
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
+/**
+ * Minimal, dependency-free HTTP client built on the native \`fetch\` API.
+ */
 export class ApiClient {
-  private client: AxiosInstance;
+  private baseURL: string;
+  private readonly timeout: number;
+  private readonly headers: Record<string, string>;
 
   constructor(config: ApiClientConfig) {
-    this.client = axios.create({
-      baseURL: config.baseURL,
-      timeout: config.timeout || 30000,
-      headers: {
-        'Content-Type': 'application/json',
-        ...config.headers
-      }
-    });
+    this.baseURL = config.baseURL;
+    this.timeout = config.timeout ?? 30000;
+    this.headers = { 'Content-Type': 'application/json', ...config.headers };
   }
 
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.get<T>(url, config);
-    return this.transformResponse(response);
-  }
+  private async send<T>(method: string, url: string, data?: unknown): Promise<ApiResponse<T>> {
+    const target = url.startsWith('http') ? url : \`\${this.baseURL}\${url}\`;
+    const init: RequestInit = {
+      method,
+      headers: this.headers,
+      signal: AbortSignal.timeout(this.timeout)
+    };
 
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.post<T>(url, data, config);
-    return this.transformResponse(response);
-  }
+    if (data !== undefined && data !== null) {
+      init.body = typeof data === 'string' ? data : JSON.stringify(data);
+    }
 
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.put<T>(url, data, config);
-    return this.transformResponse(response);
-  }
+    const response = await fetch(target, init);
+    const text = await response.text();
 
-  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.patch<T>(url, data, config);
-    return this.transformResponse(response);
-  }
+    let body: unknown = text;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = text;
+    }
 
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
-    const response = await this.client.delete<T>(url, config);
-    return this.transformResponse(response);
-  }
+    if (!response.ok) {
+      throw new ApiError(\`Request failed with status \${response.status}\`, response.status, body);
+    }
 
-  setAuthToken(token: string): void {
-    this.client.defaults.headers.common['Authorization'] = \`Bearer \${token}\`;
-  }
-
-  clearAuthToken(): void {
-    delete this.client.defaults.headers.common['Authorization'];
-  }
-
-  setBaseURL(baseURL: string): void {
-    this.client.defaults.baseURL = baseURL;
-  }
-
-  private transformResponse<T>(response: AxiosResponse<T>): ApiResponse<T> {
     return {
-      data: response.data,
+      data: body as T,
       status: response.status,
       statusText: response.statusText,
       headers: response.headers
     };
   }
+
+  get<T = unknown>(url: string): Promise<ApiResponse<T>> {
+    return this.send<T>('GET', url);
+  }
+
+  post<T = unknown>(url: string, data?: unknown): Promise<ApiResponse<T>> {
+    return this.send<T>('POST', url, data);
+  }
+
+  put<T = unknown>(url: string, data?: unknown): Promise<ApiResponse<T>> {
+    return this.send<T>('PUT', url, data);
+  }
+
+  patch<T = unknown>(url: string, data?: unknown): Promise<ApiResponse<T>> {
+    return this.send<T>('PATCH', url, data);
+  }
+
+  delete<T = unknown>(url: string): Promise<ApiResponse<T>> {
+    return this.send<T>('DELETE', url);
+  }
+
+  setAuthToken(token: string): void {
+    this.headers.Authorization = \`Bearer \${token}\`;
+  }
+
+  clearAuthToken(): void {
+    delete this.headers.Authorization;
+  }
+
+  setBaseURL(baseURL: string): void {
+    this.baseURL = baseURL;
+  }
+
+  setHeaders(headers: Record<string, string>): void {
+    Object.assign(this.headers, headers);
+  }
 }
 
-export default ApiClient;`;
+export default ApiClient;
+`;
+  }
 
-    const testHelpersContent = `import { expect } from 'chai';
-import { ApiResponse } from './api-client';
+  /**
+   * Source for the generated assertion helpers (backed by bun:test).
+   * @private
+   */
+  private static _testHelpersSource(): string {
+    return `import { expect } from 'bun:test';
+import type { ApiResponse } from './api-client';
 
-export const DEFAULT_TIMEOUT = 30000;
+export const DEFAULT_TIMEOUT = Number(process.env.TEST_TIMEOUT ?? 30000);
 
-/**
- * Validates that a response indicates success
- */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/** Validate that a response indicates success. */
 export function expectSuccess(response: ApiResponse, validStatuses: number[] = [200, 201, 204]): void {
-  expect(response.status, \`Expected success status, got \${response.status}\`).to.be.oneOf(validStatuses);
-  expect(response.data, 'Response should have data').to.exist;
+  expect(validStatuses).toContain(response.status);
+  expect(response.data).toBeDefined();
 }
 
-/**
- * Validates response time is within acceptable limits
- */
+/** Validate that the response time is within acceptable limits. */
 export function expectResponseTime(startTime: number, maxTime: number = DEFAULT_TIMEOUT): void {
-  const responseTime = Date.now() - startTime;
-  expect(responseTime, \`Response time \${responseTime}ms exceeded maximum \${maxTime}ms\`).to.be.below(maxTime);
+  expect(Date.now() - startTime).toBeLessThan(maxTime);
 }
 
-/**
- * Validates that response has required fields
- */
-export function expectRequiredFields(data: any, fields: string[]): void {
-  expect(data, 'Response data should exist').to.exist;
-  
+/** Validate that a response has the required fields. */
+export function expectRequiredFields(data: unknown, fields: string[]): void {
+  expect(data).toBeDefined();
   for (const field of fields) {
-    expect(data, \`Response should have field: \${field}\`).to.have.property(field);
-    expect(data[field], \`Field \${field} should not be null or undefined\`).to.not.be.oneOf([null, undefined]);
+    expect(data).toHaveProperty(field);
   }
 }
 
-/**
- * Validates that response data is an array
- */
-export function expectArray(data: any, minLength: number = 0): void {
-  expect(data, 'Response data should be an array').to.be.an('array');
-  expect(data.length, \`Array should have at least \${minLength} items\`).to.be.at.least(minLength);
+/** Validate that response data is an array. */
+export function expectArray(data: unknown, minLength = 0): void {
+  expect(Array.isArray(data)).toBe(true);
+  expect((data as unknown[]).length).toBeGreaterThanOrEqual(minLength);
 }
 
-/**
- * Validates that response data is an object
- */
-export function expectObject(data: any): void {
-  expect(data, 'Response data should be an object').to.be.an('object');
-  expect(data, 'Response data should not be null').to.not.be.null;
+/** Validate that response data is a non-null object. */
+export function expectObject(data: unknown): void {
+  expect(isRecord(data)).toBe(true);
 }
 
-/**
- * Validates that response contains pagination metadata
- */
-export function expectPagination(data: any): void {
+/** Validate that a response contains pagination metadata. */
+export function expectPagination(data: unknown): void {
   expectObject(data);
-  
-  const paginationFields = ['page', 'limit', 'total'];
-  const hasAnyPaginationField = paginationFields.some(field => 
-    data.hasOwnProperty(field) || 
-    (data.meta && data.meta.hasOwnProperty(field)) ||
-    (data.pagination && data.pagination.hasOwnProperty(field))
+  const fields = ['page', 'limit', 'total'];
+  const record = data as Record<string, unknown>;
+  const meta = isRecord(record.meta) ? record.meta : {};
+  const pagination = isRecord(record.pagination) ? record.pagination : {};
+  const hasField = fields.some(
+    field => Object.hasOwn(record, field) || Object.hasOwn(meta, field) || Object.hasOwn(pagination, field)
   );
-  
-  expect(hasAnyPaginationField, 'Response should contain pagination metadata').to.be.true;
+  expect(hasField).toBe(true);
 }
 
-/**
- * Validates that response contains error information
- */
+/** Validate that a response contains error information. */
 export function expectError(response: ApiResponse, expectedStatus: number[] = [400, 401, 403, 404, 422, 500]): void {
-  expect(response.status, \`Expected error status, got \${response.status}\`).to.be.oneOf(expectedStatus);
-  
-  if (response.data) {
-    const hasErrorInfo = 
-      response.data.error || 
-      response.data.message || 
-      response.data.errors ||
-      typeof response.data === 'string';
-    
-    expect(hasErrorInfo, 'Error response should contain error information').to.be.true;
+  expect(expectedStatus).toContain(response.status);
+  if (isRecord(response.data)) {
+    const { error, message, errors } = response.data;
+    expect(Boolean(error || message || errors)).toBe(true);
   }
 }
 
-/**
- * Validates that response data matches a schema pattern
- */
-export function expectSchema(data: any, schema: Record<string, string>): void {
+/** Validate that response data matches a simple type schema. */
+export function expectSchema(data: unknown, schema: Record<string, string>): void {
   expectObject(data);
-  
+  const record = data as Record<string, unknown>;
   for (const [field, expectedType] of Object.entries(schema)) {
-    expect(data, \`Response should have field: \${field}\`).to.have.property(field);
-    
-    const actualValue = data[field];
-    switch (expectedType) {
-      case 'string':
-        expect(actualValue, \`Field \${field} should be a string\`).to.be.a('string');
-        break;
-      case 'number':
-        expect(actualValue, \`Field \${field} should be a number\`).to.be.a('number');
-        break;
-      case 'boolean':
-        expect(actualValue, \`Field \${field} should be a boolean\`).to.be.a('boolean');
-        break;
-      case 'array':
-        expect(actualValue, \`Field \${field} should be an array\`).to.be.an('array');
-        break;
-      case 'object':
-        expect(actualValue, \`Field \${field} should be an object\`).to.be.an('object');
-        break;
-      case 'date':
-        expect(actualValue, \`Field \${field} should be a valid date\`).to.satisfy((val: any) => {
-          return !isNaN(Date.parse(val));
-        });
-        break;
-      default:
-        throw new Error(\`Unknown schema type: \${expectedType}\`);
+    expect(record).toHaveProperty(field);
+    const value = record[field];
+    if (expectedType === 'array') {
+      expect(Array.isArray(value)).toBe(true);
+    } else if (expectedType === 'date') {
+      expect(Number.isNaN(Date.parse(String(value)))).toBe(false);
+    } else {
+      expect(value).toBeTypeOf(expectedType as 'string' | 'number' | 'boolean' | 'object');
     }
   }
 }
 
-/**
- * Validates that an ID field is valid
- */
-export function expectValidId(id: any, fieldName: string = 'id'): void {
-  expect(id, \`\${fieldName} should exist\`).to.exist;
-  
-  // Check if it's a valid numeric ID or UUID
-  const isNumericId = typeof id === 'number' && id > 0;
-  const isStringId = typeof id === 'string' && id.length > 0;
-  
-  expect(isNumericId || isStringId, \`\${fieldName} should be a valid identifier\`).to.be.true;
+/** Validate that an identifier is a non-empty string or positive number. */
+export function expectValidId(id: unknown, fieldName = 'id'): void {
+  const valid = (typeof id === 'number' && id > 0) || (typeof id === 'string' && id.length > 0);
+  expect(valid, \`\${fieldName} should be a valid identifier\`).toBe(true);
 }
 
-/**
- * Validates that response contains authentication token
- */
-export function expectAuthToken(data: any): void {
+/** Validate that a response contains an authentication token. */
+export function expectAuthToken(data: unknown): void {
   expectObject(data);
-  
-  const tokenFields = ['token', 'access_token', 'accessToken', 'jwt'];
-  const hasToken = tokenFields.some(field => data.hasOwnProperty(field));
-  
-  expect(hasToken, 'Response should contain authentication token').to.be.true;
-  
-  const tokenField = tokenFields.find(field => data.hasOwnProperty(field));
+  const record = data as Record<string, unknown>;
+  const tokenField = ['token', 'access_token', 'accessToken', 'jwt'].find(field => Object.hasOwn(record, field));
+  expect(tokenField).toBeDefined();
   if (tokenField) {
-    expect(data[tokenField], 'Token should not be empty').to.be.a('string').and.not.be.empty;
+    expect(record[tokenField]).toBeTypeOf('string');
   }
 }
 
-/**
- * Validates that response indicates successful creation
- */
+/** Validate that a response indicates successful creation. */
 export function expectCreated(response: ApiResponse): void {
-  expect(response.status, 'Should return 201 Created status').to.equal(201);
+  expect(response.status).toBe(201);
   expectObject(response.data);
-  
-  // Check for common ID fields that indicate resource creation
-  const idFields = ['id', '_id', 'uuid'];
-  const hasId = idFields.some(field => response.data.hasOwnProperty(field));
-  
-  if (hasId) {
-    const idField = idFields.find(field => response.data.hasOwnProperty(field));
-    expectValidId(response.data[idField!], idField);
+  const record = response.data as Record<string, unknown>;
+  const idField = ['id', '_id', 'uuid'].find(field => Object.hasOwn(record, field));
+  if (idField) {
+    expectValidId(record[idField], idField);
   }
 }
 
-/**
- * Validates that response indicates successful update
- */
+/** Validate that a response indicates a successful update. */
 export function expectUpdated(response: ApiResponse): void {
   expectSuccess(response, [200, 204]);
-  
   if (response.status === 200) {
     expectObject(response.data);
   }
 }
 
-/**
- * Validates that response indicates successful deletion
- */
+/** Validate that a response indicates successful deletion. */
 export function expectDeleted(response: ApiResponse): void {
   expectSuccess(response, [200, 204]);
 }
-
-export default {
-  expectSuccess,
-  expectResponseTime,
-  expectRequiredFields,
-  expectArray,
-  expectObject,
-  expectPagination,
-  expectError,
-  expectSchema,
-  expectValidId,
-  expectAuthToken,
-  expectCreated,
-  expectUpdated,
-  expectDeleted
-};`;
-
-    await FileSystem.writeFile(
-      path.join(outputDir, 'src', 'helpers', 'api-client.ts'),
-      apiClientContent
-    );
-
-    await FileSystem.writeFile(
-      path.join(outputDir, 'src', 'helpers', 'test-helpers.ts'),
-      testHelpersContent
-    );
-  }
-
-  /**
-   * Generate enhanced setup file
-   * @private
-   */
-  private static async _generateEnhancedSetup(
-    outputDir: string,
-    baseUrl: string,
-    environment: EnvironmentVariables | null
-  ): Promise<void> {
-    const envVarsComment = environment
-      ? `// Environment variables from Postman collection\n${Object.entries(environment)
-        .map(([key, value]) => `// ${key}=${value}`)
-        .join('\n')}`
-      : '// No environment variables from Postman collection';
-
-    const setupContent = `import 'dotenv/config';
-import { expect } from 'chai';
-import { ApiClient } from './helpers/api-client';
-import * as testHelpers from './helpers/test-helpers';
-
-// Configuration
-const BASE_URL = process.env.API_BASE_URL || '${baseUrl}';
-const API_TIMEOUT = parseInt(process.env.API_TIMEOUT || '30000');
-export const DEFAULT_TIMEOUT = parseInt(process.env.TEST_TIMEOUT || '30000');
-
-// Initialize API client
-export const api = new ApiClient({
-  baseURL: BASE_URL,
-  timeout: API_TIMEOUT,
-  headers: {
-    'User-Agent': 'postmortem-API-Tests/1.0.0'
-  }
-});
-
-// Re-export test helpers for convenience
-export const {
-  expectSuccess,
-  expectResponseTime,
-  expectRequiredFields,
-  expectArray,
-  expectObject,
-  expectPagination,
-  expectError,
-  expectSchema,
-  expectValidId,
-  expectAuthToken,
-  expectCreated,
-  expectUpdated,
-  expectDeleted
-} = testHelpers;
-
-// Re-export expect for compatibility
-export { expect };
-
-// Global test setup
-before(function() {
-  console.log(\`🚀 Starting API tests against: \${BASE_URL}\`);
-  console.log(\`⏱️  Default timeout: \${DEFAULT_TIMEOUT}ms\`);
-});
-
-after(function() {
-  console.log('✅ API tests completed');
-});
-
-// Helper functions
-export function setAuthToken(token: string): void {
-  api.setAuthToken(token);
-}
-
-export function clearAuth(): void {
-  api.clearAuthToken();
-}
-
-export function setBaseURL(url: string): void {
-  api.setBaseURL(url);
-}
-
-${envVarsComment}
-export const env = process.env;
-
-export default {
-  api,
-  expect,
-  setAuthToken,
-  clearAuth,
-  setBaseURL,
-  env,
-  expectSuccess,
-  expectResponseTime,
-  expectRequiredFields,
-  expectArray,
-  expectObject,
-  expectPagination,
-  expectError,
-  expectSchema,
-  expectValidId,
-  expectAuthToken,
-  expectCreated,
-  expectUpdated,
-  expectDeleted
-};`;
-
-    await FileSystem.writeFile(
-      path.join(outputDir, 'src', 'setup.ts'),
-      setupContent
-    );
+`;
   }
 }
 
