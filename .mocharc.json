@@ -1,9 +1,0 @@
-{
-  "reporter": "spec",
-  "timeout": 10000,
-  "recursive": true,
-  "exit": true,
-  "require": ["ts-node/register"],
-  "extensions": ["ts"],
-  "spec": "tests/**/*.test.ts"
-}

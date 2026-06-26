@@ -1,32 +1,26 @@
-import { expect } from 'chai';
-import * as path from 'path';
-import * as fs from 'fs-extra';
-import * as tmp from 'tmp';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { readFile } from 'node:fs/promises';
+import * as path from 'node:path';
 import { PostmanConverter } from '../../src/postman-converter';
-import { PostmanCollection, PostmanEnvironment } from '../../src/utils/validator';
-
-interface TmpDir {
-  name: string;
-  removeCallback: () => void;
-}
+import { FileSystem } from '../../src/utils/filesystem';
+import type { PostmanCollection, PostmanEnvironment } from '../../src/utils/validator';
+import { makeTmpDir, removeTmpDir } from '../helpers/tmp';
 
 describe('PostmanConverter Integration Tests', () => {
-  let tmpDir: TmpDir;
+  let tmpDir: string;
   let converter: PostmanConverter;
 
-  beforeEach(() => {
-    tmpDir = tmp.dirSync({ unsafeCleanup: true });
+  beforeEach(async () => {
+    tmpDir = await makeTmpDir();
     converter = new PostmanConverter();
   });
 
-  afterEach(() => {
-    if (tmpDir) {
-      tmpDir.removeCallback();
-    }
+  afterEach(async () => {
+    await removeTmpDir(tmpDir);
   });
 
   describe('processCollection', () => {
-    it('should process valid collection and generate test files', async () => {
+    it('should process a valid collection and generate test files', async () => {
       const collection: PostmanCollection = {
         info: {
           name: 'Test Collection',
@@ -35,43 +29,23 @@ describe('PostmanConverter Integration Tests', () => {
         item: [
           {
             name: 'Simple GET Request',
-            request: {
-              method: 'GET',
-              url: 'https://api.example.com/users'
-            },
-            event: [
-              {
-                listen: 'test',
-                script: {
-                  exec: [
-                    'pm.test("Response status code is 200", function () {',
-                    '    pm.expect(pm.response.code).to.equal(200);',
-                    '});'
-                  ]
-                }
-              }
-            ]
-          }
+            request: { method: 'GET', url: 'https://api.example.com/users' }
+          } as unknown as Record<string, unknown>
         ]
       };
 
-      const results = await converter.processCollection(collection, tmpDir.name);
+      const results = await converter.processCollection(collection, tmpDir);
 
-      expect(results.testFiles).to.equal(1);
-      expect(results.baseUrl).to.equal('https://api.example.com');
+      expect(results.testFiles).toBe(1);
+      expect(results.baseUrl).toBe('https://api.example.com');
 
-      // Check if setup file was created
-      const setupExists = await fs.pathExists(path.join(tmpDir.name, 'setup.ts'));
-      expect(setupExists).to.be.true;
+      expect(await FileSystem.exists(path.join(tmpDir, 'setup.ts'))).toBe(true);
+      expect(await FileSystem.exists(path.join(tmpDir, 'simple-get-request.test.ts'))).toBe(true);
 
-      // Check if test file was created
-      const testExists = await fs.pathExists(path.join(tmpDir.name, 'simple-get-request.test.ts'));
-      expect(testExists).to.be.true;
-
-      // Verify test file content
-      const testContent = await fs.readFile(path.join(tmpDir.name, 'simple-get-request.test.ts'), 'utf8');
-      expect(testContent).to.include('describe(\'Simple GET Request\'');
-      expect(testContent).to.include('expect(response.status).to.equal(200)');
+      const testContent = await readFile(path.join(tmpDir, 'simple-get-request.test.ts'), 'utf8');
+      expect(testContent).toContain("describe('Simple GET Request'");
+      expect(testContent).toContain("import { describe, it, expect } from 'bun:test';");
+      expect(testContent).toContain('expect(response.status).toBe(200)');
     });
 
     it('should handle collections with folders', async () => {
@@ -86,47 +60,40 @@ describe('PostmanConverter Integration Tests', () => {
             item: [
               {
                 name: 'Get All Users',
-                request: {
-                  method: 'GET',
-                  url: 'https://api.example.com/users'
-                }
+                request: { method: 'GET', url: 'https://api.example.com/users' }
               },
               {
                 name: 'Create User',
                 request: {
                   method: 'POST',
                   url: 'https://api.example.com/users',
-                  body: {
-                    mode: 'raw',
-                    raw: '{"name": "John Doe"}'
-                  }
+                  body: { mode: 'raw', raw: '{"name": "John Doe"}' }
                 }
               }
             ]
-          }
+          } as unknown as Record<string, unknown>
         ]
       };
 
-      const results = await converter.processCollection(collection, tmpDir.name);
+      const results = await converter.processCollection(collection, tmpDir);
 
-      expect(results.testFiles).to.equal(2);
-      expect(results.folders).to.equal(1);
+      expect(results.testFiles).toBe(2);
+      expect(results.folders).toBe(1);
 
-      // Check if folder structure was created
-      const folderExists = await fs.pathExists(path.join(tmpDir.name, 'users-api'));
-      expect(folderExists).to.be.true;
+      expect(await FileSystem.exists(path.join(tmpDir, 'users-api'))).toBe(true);
+      expect(await FileSystem.exists(path.join(tmpDir, 'users-api', 'get-all-users.test.ts'))).toBe(
+        true
+      );
+      expect(await FileSystem.exists(path.join(tmpDir, 'users-api', 'create-user.test.ts'))).toBe(
+        true
+      );
 
-      // Check if test files exist in folder
-      const getUsersExists = await fs.pathExists(path.join(tmpDir.name, 'users-api', 'get-all-users.test.ts'));
-      const createUserExists = await fs.pathExists(path.join(tmpDir.name, 'users-api', 'create-user.test.ts'));
-
-      expect(getUsersExists).to.be.true;
-      expect(createUserExists).to.be.true;
-
-      // Verify POST request content
-      const createUserContent = await fs.readFile(path.join(tmpDir.name, 'users-api', 'create-user.test.ts'), 'utf8');
-      expect(createUserContent).to.include('request.post(\'/users\')');
-      expect(createUserContent).to.include('"name": "John Doe"');
+      const createUserContent = await readFile(
+        path.join(tmpDir, 'users-api', 'create-user.test.ts'),
+        'utf8'
+      );
+      expect(createUserContent).toContain("request.post('/users'");
+      expect(createUserContent).toContain('"name": "John Doe"');
     });
 
     it('should process environment variables', async () => {
@@ -135,11 +102,8 @@ describe('PostmanConverter Integration Tests', () => {
         item: [
           {
             name: 'Test Request',
-            request: {
-              method: 'GET',
-              url: 'https://api.example.com/test'
-            }
-          }
+            request: { method: 'GET', url: 'https://api.example.com/test' }
+          } as unknown as Record<string, unknown>
         ]
       };
 
@@ -151,21 +115,20 @@ describe('PostmanConverter Integration Tests', () => {
         ]
       };
 
-      const results = await converter.processCollection(collection, tmpDir.name, environment);
+      const results = await converter.processCollection(collection, tmpDir, environment);
 
-      expect(results.environment).to.deep.equal({
+      expect(results.environment).toEqual({
         baseUrl: 'https://api.example.com',
         apiKey: 'test-key-123'
       });
 
-      // Check setup file contains environment variables
-      const setupContent = await fs.readFile(path.join(tmpDir.name, 'setup.ts'), 'utf8');
-      expect(setupContent).to.include('"baseUrl": "https://api.example.com"');
-      expect(setupContent).to.include('"apiKey": "test-key-123"');
+      const setupContent = await readFile(path.join(tmpDir, 'setup.ts'), 'utf8');
+      expect(setupContent).toContain('"baseUrl": "https://api.example.com"');
+      expect(setupContent).toContain('"apiKey": "test-key-123"');
     });
 
-    it('should handle flat structure option', async () => {
-      const converter = new PostmanConverter({ maintainFolderStructure: false });
+    it('should handle the flat structure option', async () => {
+      const flatConverter = new PostmanConverter({ maintainFolderStructure: false });
       const collection: PostmanCollection = {
         info: { name: 'Test Collection' },
         item: [
@@ -174,59 +137,40 @@ describe('PostmanConverter Integration Tests', () => {
             item: [
               {
                 name: 'Test Request',
-                request: {
-                  method: 'GET',
-                  url: 'https://api.example.com/test'
-                }
+                request: { method: 'GET', url: 'https://api.example.com/test' }
               }
             ]
-          }
+          } as unknown as Record<string, unknown>
         ]
       };
 
-      await converter.processCollection(collection, tmpDir.name);
+      await flatConverter.processCollection(collection, tmpDir);
 
-      // Test file should be in root directory, not in folder
-      const testExists = await fs.pathExists(path.join(tmpDir.name, 'test-request.test.ts'));
-      expect(testExists).to.be.true;
-
-      const folderExists = await fs.pathExists(path.join(tmpDir.name, 'api-folder'));
-      expect(folderExists).to.be.false;
+      expect(await FileSystem.exists(path.join(tmpDir, 'test-request.test.ts'))).toBe(true);
+      expect(await FileSystem.exists(path.join(tmpDir, 'api-folder'))).toBe(false);
     });
 
-    it('should skip setup file when option is disabled', async () => {
-      const converter = new PostmanConverter({ createSetupFile: false });
+    it('should skip the setup file when disabled', async () => {
+      const noSetupConverter = new PostmanConverter({ createSetupFile: false });
       const collection: PostmanCollection = {
         info: { name: 'Test Collection' },
         item: [
           {
             name: 'Test Request',
-            request: {
-              method: 'GET',
-              url: 'https://api.example.com/test'
-            }
-          }
+            request: { method: 'GET', url: 'https://api.example.com/test' }
+          } as unknown as Record<string, unknown>
         ]
       };
 
-      await converter.processCollection(collection, tmpDir.name);
-
-      const setupExists = await fs.pathExists(path.join(tmpDir.name, 'setup.ts'));
-      expect(setupExists).to.be.false;
+      await noSetupConverter.processCollection(collection, tmpDir);
+      expect(await FileSystem.exists(path.join(tmpDir, 'setup.ts'))).toBe(false);
     });
 
-    it('should throw error for invalid collection', async () => {
-      const invalidCollection = {
-        info: { name: 'Invalid Collection' }
-        // Missing 'item' array
-      } as PostmanCollection;
-
-      try {
-        await converter.processCollection(invalidCollection, tmpDir.name);
-        expect.fail('Should have thrown an error');
-      } catch (error: unknown) {
-        expect((error as Error).message).to.include('Invalid collection');
-      }
+    it('should throw for an invalid collection', async () => {
+      const invalidCollection = { info: { name: 'Invalid Collection' } } as PostmanCollection;
+      await expect(converter.processCollection(invalidCollection, tmpDir)).rejects.toThrow(
+        'Invalid collection'
+      );
     });
   });
 });

@@ -1,13 +1,8 @@
-import { expect } from 'chai';
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs-extra';
-import * as tmp from 'tmp';
-
-interface TmpDir {
-  name: string;
-  removeCallback: () => void;
-}
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { spawn } from 'node:child_process';
+import * as path from 'node:path';
+import { FileSystem } from '../../src/utils/filesystem';
+import { makeTmpDir, removeTmpDir } from '../helpers/tmp';
 
 interface CLIResult {
   code: number;
@@ -15,201 +10,161 @@ interface CLIResult {
   stderr: string;
 }
 
-describe('CLI Integration Tests', () => {
-  let tmpDir: TmpDir;
-  const cliPath = path.join(__dirname, '../../dist/cli.js');
-  const fixturePath = path.join(__dirname, '../fixtures');
+const cliPath = path.join(import.meta.dir, '../../src/cli.ts');
+const fixturePath = path.join(import.meta.dir, '../fixtures');
 
-  beforeEach(() => {
-    tmpDir = tmp.dirSync({ unsafeCleanup: true });
-  });
+function runCLI(args: string[]): Promise<CLIResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('bun', [cliPath, ...args], { stdio: ['pipe', 'pipe', 'pipe'] });
 
-  afterEach(() => {
-    if (tmpDir) {
-      tmpDir.removeCallback();
-    }
-  });
+    let stdout = '';
+    let stderr = '';
 
-  function runCLI(args: string[]): Promise<CLIResult> {
-    return new Promise((resolve, reject) => {
-      const child: ChildProcess = spawn('node', [cliPath, ...args], {
-        stdio: ['pipe', 'pipe', 'pipe']
-      });
-
-      let stdout = '';
-      let stderr = '';
-
-      child.stdout?.on('data', (data: Buffer) => {
-        stdout += data.toString();
-      });
-
-      child.stderr?.on('data', (data: Buffer) => {
-        stderr += data.toString();
-      });
-
-      child.on('close', (code: number | null) => {
-        resolve({ code: code || 0, stdout, stderr });
-      });
-
-      child.on('error', reject);
+    child.stdout?.on('data', (data: Buffer) => {
+      stdout += data.toString();
     });
-  }
+    child.stderr?.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+    child.on('close', (code: number | null) => resolve({ code: code ?? 0, stdout, stderr }));
+    child.on('error', reject);
+  });
+}
+
+describe('CLI Integration Tests', () => {
+  let tmpDir: string;
+
+  beforeEach(async () => {
+    tmpDir = await makeTmpDir();
+  });
+
+  afterEach(async () => {
+    await removeTmpDir(tmpDir);
+  });
 
   describe('successful conversion', () => {
-    it('should convert collection successfully', async function() {
-      this.timeout(10000);
+    it('should convert a collection successfully', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'test-collection.json'),
+        '-o',
+        tmpDir
+      ]);
 
-      const args = [
-        '-c', path.join(fixturePath, 'test-collection.json'),
-        '-o', tmpDir.name
-      ];
-
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(0);
-      expect(result.stdout).to.include('Conversion completed successfully');
-
-      // Check if files were created
-      const setupExists = await fs.pathExists(path.join(tmpDir.name, 'setup.ts'));
-      expect(setupExists).to.be.true;
-
-      const testExists = await fs.pathExists(path.join(tmpDir.name, 'simple-get-request.test.ts'));
-      expect(testExists).to.be.true;
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('Conversion completed successfully');
+      expect(await FileSystem.exists(path.join(tmpDir, 'setup.ts'))).toBe(true);
+      expect(await FileSystem.exists(path.join(tmpDir, 'simple-get-request.test.ts'))).toBe(true);
     });
 
-    it('should process collection with environment', async function() {
-      this.timeout(10000);
+    it('should process a collection with an environment', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'test-collection.json'),
+        '-e',
+        path.join(fixturePath, 'test-environment.json'),
+        '-o',
+        tmpDir
+      ]);
 
-      const args = [
-        '-c', path.join(fixturePath, 'test-collection.json'),
-        '-e', path.join(fixturePath, 'test-environment.json'),
-        '-o', tmpDir.name
-      ];
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('Environment variables: 3');
 
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(0);
-      expect(result.stdout).to.include('Environment variables: 3');
-
-      // Check setup file contains environment
-      const setupContent = await fs.readFile(path.join(tmpDir.name, 'setup.ts'), 'utf8');
-      expect(setupContent).to.include('"baseUrl": "https://api.example.com"');
+      const setupContent = await FileSystem.readFile(path.join(tmpDir, 'setup.ts'));
+      expect(setupContent).toContain('"baseUrl": "https://api.example.com"');
     });
 
-    it('should work with debug flag', async function() {
-      this.timeout(10000);
-
-      const args = [
-        '-c', path.join(fixturePath, 'test-collection.json'),
-        '-o', tmpDir.name,
+    it('should work with the debug flag', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'test-collection.json'),
+        '-o',
+        tmpDir,
         '--debug'
-      ];
-
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(0);
-      expect(result.stdout).to.include('Debug mode enabled');
+      ]);
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('Debug mode enabled');
     });
 
-    it('should work with flat structure', async function() {
-      this.timeout(10000);
-
-      const args = [
-        '-c', path.join(fixturePath, 'test-collection.json'),
-        '-o', tmpDir.name,
+    it('should work with a flat structure', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'test-collection.json'),
+        '-o',
+        tmpDir,
         '--flat'
-      ];
+      ]);
 
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(0);
-
-      // Check that folder structure is flattened
-      const createUserExists = await fs.pathExists(path.join(tmpDir.name, 'create-user.test.ts'));
-      expect(createUserExists).to.be.true;
-
-      const apiFolderExists = await fs.pathExists(path.join(tmpDir.name, 'api-folder'));
-      expect(apiFolderExists).to.be.false;
+      expect(result.code).toBe(0);
+      expect(await FileSystem.exists(path.join(tmpDir, 'create-user.test.ts'))).toBe(true);
+      expect(await FileSystem.exists(path.join(tmpDir, 'api-folder'))).toBe(false);
     });
 
-    it('should work without setup file', async function() {
-      this.timeout(10000);
-
-      const args = [
-        '-c', path.join(fixturePath, 'test-collection.json'),
-        '-o', tmpDir.name,
+    it('should work without a setup file', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'test-collection.json'),
+        '-o',
+        tmpDir,
         '--no-setup'
-      ];
-
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(0);
-
-      const setupExists = await fs.pathExists(path.join(tmpDir.name, 'setup.ts'));
-      expect(setupExists).to.be.false;
+      ]);
+      expect(result.code).toBe(0);
+      expect(await FileSystem.exists(path.join(tmpDir, 'setup.ts'))).toBe(false);
     });
   });
 
   describe('error handling', () => {
-    it('should show error for missing collection argument', async () => {
-      const args = ['-o', tmpDir.name];
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(1);
-      expect(result.stderr).to.include('required option');
+    it('should error for a missing collection argument', async () => {
+      const result = await runCLI(['-o', tmpDir]);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('required option');
     });
 
-    it('should show error for non-existent collection file', async () => {
-      const args = [
-        '-c', path.join(fixturePath, 'nonexistent.json'),
-        '-o', tmpDir.name
-      ];
-
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(1);
-      expect(result.stderr).to.include('File not found');
+    it('should error for a non-existent collection file', async () => {
+      const result = await runCLI(['-c', path.join(fixturePath, 'nonexistent.json'), '-o', tmpDir]);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('File not found');
     });
 
-    it('should show error for invalid collection', async () => {
-      const args = [
-        '-c', path.join(fixturePath, 'invalid-collection.json'),
-        '-o', tmpDir.name
-      ];
-
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(1);
-      expect(result.stderr).to.include('Invalid collection');
+    it('should error for an invalid collection', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'invalid-collection.json'),
+        '-o',
+        tmpDir
+      ]);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('Invalid collection');
     });
 
-    it('should continue with warning for invalid environment file', async () => {
-      const args = [
-        '-c', path.join(fixturePath, 'test-collection.json'),
-        '-e', path.join(fixturePath, 'nonexistent-env.json'),
-        '-o', tmpDir.name
-      ];
+    it('should continue with a warning for an invalid environment file', async () => {
+      const result = await runCLI([
+        '-c',
+        path.join(fixturePath, 'test-collection.json'),
+        '-e',
+        path.join(fixturePath, 'nonexistent-env.json'),
+        '-o',
+        tmpDir
+      ]);
 
-      const result = await runCLI(args);
-
-      expect(result.code).to.equal(0); // Should still succeed
-      expect(result.stdout).to.include('Failed to read environment file');
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('Failed to read environment file');
     });
   });
 
   describe('help and version', () => {
-    it('should show version', async () => {
+    it('should show the version', async () => {
       const result = await runCLI(['--version']);
-      expect(result.code).to.equal(0);
-      expect(result.stdout).to.include('1.1.0');
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('2.0.0');
     });
 
     it('should show help', async () => {
       const result = await runCLI(['--help']);
-      expect(result.code).to.equal(0);
-      expect(result.stdout).to.include('Convert Postman collections to Mocha/Supertest tests');
-      expect(result.stdout).to.include('--collection');
-      expect(result.stdout).to.include('--output');
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('Convert Postman collections into Bun-native tests');
+      expect(result.stdout).toContain('--collection');
+      expect(result.stdout).toContain('--output');
     });
   });
 });

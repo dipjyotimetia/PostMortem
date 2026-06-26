@@ -28,6 +28,7 @@ export interface PostmanItem {
 }
 
 export interface GenerationOptions {
+  enhanced?: boolean;
   [key: string]: unknown;
 }
 
@@ -40,234 +41,179 @@ export interface EnvironmentVariables {
   [key: string]: string;
 }
 
+const METHODS_WITH_BODY = new Set(['post', 'put', 'patch']);
+
 /**
- * Generates Mocha test files from Postman requests
+ * Generates `bun:test` test files (native `fetch`) from Postman requests.
  */
 export class TestGenerator {
   /**
-   * Generate a Mocha test file from a Postman request
+   * Generate a `bun:test` test file body from a Postman request.
    * @param item - The Postman request item
    * @param parentName - The name of the parent folder
-   * @param options - Generation options
-   * @returns The generated Mocha test code
+   * @param options - Generation options (`enhanced` for full-project output)
+   * @returns The generated test code (without import header)
    */
-  static generateMochaTestFromRequest(
+  static generateTestFromRequest(
     item: PostmanItem,
-    parentName: string = '',
+    parentName = '',
     options: GenerationOptions = {}
   ): string {
+    const { testName, request } = TestGenerator._describe(item, parentName);
 
-    if (!item?.name) {
-      throw new Error('Request item must have a name');
-    }
-
-    const testName = parentName ? `${parentName} - ${item.name}` : item.name;
-    const request = item.request;
-
-    if (!request) {
-      throw new Error(`Request "${item.name}" has no request object`);
+    if (options.enhanced) {
+      return TestGenerator.generateEnhancedTest(item, parentName, options);
     }
 
     const method = (request.method || 'GET').toLowerCase();
-    const { pathname } = this._extractUrl(request.url, item.name);
-    const body = this._extractRequestBody(request.body);
-    const _headers = this._extractHeaders(request.header);
-    const testScript = this._extractTestScript(item.events);
+    const { pathname } = TestGenerator._extractUrl(request.url);
+    const body = TestGenerator._extractRequestBody(request.body);
+    const headers = TestGenerator._extractHeaders(request.header);
+    const testScript = TestGenerator._extractTestScript(item.events);
 
-    const mochaAssertions = TestConverter.convertPostmanTestToMocha(testScript);
+    const assertions = TestConverter.convertPostmanTest(testScript);
+    const requestCode = TestGenerator._generateRequestCode(method, pathname, body, headers);
+    const defaultAssertion = 'expect(response.status).toBe(200);';
 
-    // Determine if this is for full project (enhanced) mode
-    const isEnhanced = !!(options && options.enhanced);
-
-
-    if (isEnhanced) {
-      // Generate enhanced test with API client
-      const bodyParam = body ? `, ${JSON.stringify(body, null, 6)}` : '';
-
-      return `
-describe('${testName}', function() {
-  it('should respond with correct data', async function() {
-    const startTime = Date.now();
-    
-    try {
-      const response = await api.${method}('${pathname}'${bodyParam});
-      
-      // Basic validation
-      expectSuccess(response);
-      expectResponseTime(startTime, DEFAULT_TIMEOUT);
-      
-      ${mochaAssertions || '// Add custom assertions here'}
-      
-      console.log('✓ ' + this.test?.title + ' - Status: ' + response.status + ', Time: ' + (Date.now() - startTime) + 'ms');
-      
-    } catch (error: unknown) {
-      console.error('✗ ' + this.test?.title + ' failed:', error.message);
-      throw error;
-    }
-  });
-});
-`;
-    } else {
-      // Generate regular test with supertest
-      const requestCode = this._generateRequestCode(method, pathname, body, _headers);
-      const defaultAssertion = 'expect(response.status).to.equal(200);';
-
-      return `
-describe('${testName}', function() {
-  it('should respond with correct data', async function() {
+    return `describe('${testName}', () => {
+  it('should respond with correct data', async () => {
     ${requestCode}
-    
-    ${mochaAssertions || defaultAssertion}
+
+    ${assertions || defaultAssertion}
   });
 });
 `;
-    }
   }
 
   /**
-   * Generate enhanced Mocha test file for full project setup
-   * @param item - The Postman request item
-   * @param parentName - The name of the parent folder
-   * @param options - Generation options
-   * @returns The generated enhanced Mocha test code
+   * Generate an enhanced (full-project) `bun:test` file backed by the
+   * shared API client and assertion helpers.
    */
-  static generateEnhancedMochaTest(
+  static generateEnhancedTest(
     item: PostmanItem,
-    parentName: string = '',
+    parentName = '',
     _options: GenerationOptions = {}
   ): string {
-    if (!item?.name) {
-      throw new Error('Request item must have a name');
-    }
-
-    const testName = parentName ? `${parentName} - ${item.name}` : item.name;
-    const request = item.request;
-
-    if (!request) {
-      throw new Error(`Request "${item.name}" has no request object`);
-    }
+    const { testName, request } = TestGenerator._describe(item, parentName);
 
     const method = (request.method || 'GET').toLowerCase();
-    const { pathname } = this._extractUrl(request.url, item.name);
-    const body = this._extractRequestBody(request.body);
-    const testScript = this._extractTestScript(item.events);
+    const { pathname } = TestGenerator._extractUrl(request.url);
+    const body = TestGenerator._extractRequestBody(request.body);
+    const testScript = TestGenerator._extractTestScript(item.events);
 
-    const mochaAssertions = TestConverter.convertPostmanTestToMocha(testScript);
-    const hasCustomAssertions = mochaAssertions.trim().length > 0;
+    const converted = TestConverter.convertPostmanTest(testScript).trim();
+    const assertions = converted
+      ? `// Custom assertions from Postman\n      ${converted}`
+      : '// Default validation\n      expect(response.data).toBeDefined();';
 
-    // Generate enhanced test with API client and helpers
     const bodyParam = body ? `, ${JSON.stringify(body, null, 6)}` : '';
-    const assertions = hasCustomAssertions
-      ? `// Custom assertions from Postman\n      ${mochaAssertions}`
-      : '// Default validation\n      expect(response.data).to.exist;';
+    const additionalTests = TestGenerator._generateAdditionalTests(method, pathname, body);
 
-    // Create the test content using string concatenation to avoid template literal issues
-    let testContent = `describe('${testName}', function() {\n`;
-    testContent += '  it(\'should respond with correct data\', async function() {\n';
-    testContent += '    const startTime = Date.now();\n';
-    testContent += '    \n';
-    testContent += '    try {\n';
-    testContent += '      // Make API request using enhanced client\n';
-    testContent += `      const response = await api.${method}('${pathname}'${bodyParam});\n`;
-    testContent += '      \n';
-    testContent += '      // Basic success validation\n';
-    testContent += '      expectSuccess(response);\n';
-    testContent += '      \n';
-    testContent += '      // Response time validation\n';
-    testContent += '      expectResponseTime(startTime, DEFAULT_TIMEOUT);\n';
-    testContent += '      \n';
-    testContent += `      ${assertions}\n`;
-    testContent += '      \n';
-    testContent += '      // Log response for debugging\n';
-    testContent += '      console.log(\'✓ \' + this.test?.title + \' - Status: \' + response.status + \', Time: \' + (Date.now() - startTime) + \'ms\');\n';
-    testContent += '      \n';
-    testContent += '    } catch (error: unknown) {\n';
-    testContent += '      console.error(\'✗ \' + this.test?.title + \' failed:\', error.message);\n';
-    testContent += '      throw error;\n';
-    testContent += '    }\n';
-    testContent += '  });\n';
-    testContent += '  \n';
-    testContent += this._generateAdditionalTests(method, pathname, body);
-    testContent += '\n});';
+    return `describe('${testName}', () => {
+  it('should respond with correct data', async () => {
+    const start = Date.now();
+    const response = await api.${method}('${pathname}'${bodyParam});
 
-    return testContent;
+    expectSuccess(response);
+    expectResponseTime(start, DEFAULT_TIMEOUT);
+
+    ${assertions}
+  });
+
+  ${additionalTests}
+});
+`;
   }
 
   /**
-   * Generate additional test cases based on the request type
+   * Resolve the describe title and validate the request item.
+   * @private
+   */
+  private static _describe(
+    item: PostmanItem,
+    parentName: string
+  ): { testName: string; request: PostmanRequest } {
+    if (!item?.name) {
+      throw new Error('Request item must have a name');
+    }
+    if (!item.request) {
+      throw new Error(`Request "${item.name}" has no request object`);
+    }
+    const testName = parentName ? `${parentName} - ${item.name}` : item.name;
+    return { testName, request: item.request };
+  }
+
+  /**
+   * Generate additional test cases based on the request method.
    * @private
    */
   private static _generateAdditionalTests(method: string, pathname: string, body: unknown): string {
     const tests: string[] = [];
+    const smokeBody = body ? `, ${JSON.stringify(body, null, 6)}` : '';
 
-    // Add smoke test for all endpoints
-    const smokeBodyParam = body ? `, ${JSON.stringify(body, null, 6)}` : '';
-    tests.push(`it('should be accessible (smoke test)', async function() {
-    const response = await api.${method}('${pathname}'${smokeBodyParam});
-    expect(response.status).to.be.lessThan(500);
+    tests.push(`it('should be accessible (smoke test)', async () => {
+    const response = await api.${method}('${pathname}'${smokeBody});
+    expect(response.status).toBeLessThan(500);
   });`);
 
-    // Add specific tests based on method
     switch (method.toUpperCase()) {
-    case 'GET':
-      if (pathname.includes('/:id') || pathname.match(/\/\d+/)) {
-        const invalidPath = pathname.replace(/\/:\w+|\/\d+/, '/99999');
-        tests.push(`it('should handle invalid ID gracefully', async function() {
+      case 'GET':
+        if (pathname.includes('/:id') || /\/\d+/.test(pathname)) {
+          const invalidPath = pathname.replace(/\/:\w+|\/\d+/, '/99999');
+          tests.push(`it('should handle invalid ID gracefully', async () => {
     try {
       const response = await api.get('${invalidPath}');
-      expect(response.status).to.be.oneOf([404, 400]);
-    } catch (error: unknown) {
-      // Expected for invalid IDs
-      expect(error.status).to.be.oneOf([404, 400]);
+      expect([404, 400]).toContain(response.status);
+    } catch (error) {
+      expect([404, 400]).toContain((error as { status: number }).status);
     }
   });`);
-      }
-      break;
+        }
+        break;
 
-    case 'POST':
-      tests.push(`it('should validate required fields', async function() {
+      case 'POST':
+        tests.push(`it('should validate required fields', async () => {
     try {
       const response = await api.post('${pathname}', {});
-      // Either succeeds with defaults or fails validation
-      expect(response.status).to.be.oneOf([201, 400, 422]);
-    } catch (error: unknown) {
-      expect(error.status).to.be.oneOf([400, 422]);
+      expect([201, 400, 422]).toContain(response.status);
+    } catch (error) {
+      expect([400, 422]).toContain((error as { status: number }).status);
     }
   });`);
-      break;
+        break;
 
-    case 'PUT':
-    case 'PATCH':
-      tests.push(`it('should handle partial updates', async function() {
+      case 'PUT':
+      case 'PATCH':
+        tests.push(`it('should handle partial updates', async () => {
     const partialData = { name: 'Updated Name' };
     const response = await api.${method}('${pathname}', partialData);
     expectSuccess(response, [200, 204]);
   });`);
-      break;
+        break;
 
-    case 'DELETE':
-      if (pathname.includes('/:id') || pathname.match(/\/\d+/)) {
-        const invalidPath = pathname.replace(/\/:\w+|\/\d+/, '/99999');
-        tests.push(`it('should handle non-existent resource deletion', async function() {
+      case 'DELETE':
+        if (pathname.includes('/:id') || /\/\d+/.test(pathname)) {
+          const invalidPath = pathname.replace(/\/:\w+|\/\d+/, '/99999');
+          tests.push(`it('should handle non-existent resource deletion', async () => {
     try {
       const response = await api.delete('${invalidPath}');
-      expect(response.status).to.be.oneOf([404, 204]);
-    } catch (error: unknown) {
-      expect(error.status).to.equal(404);
+      expect([404, 204]).toContain(response.status);
+    } catch (error) {
+      expect((error as { status: number }).status).toBe(404);
     }
   });`);
-      }
-      break;
+        }
+        break;
     }
 
     return tests.join('\n\n  ');
   }
 
   /**
-   * Extract URL information from request
+   * Extract URL information from a request.
    * @private
    */
-  private static _extractUrl(requestUrl: unknown, _itemName: string): UrlInfo {
+  private static _extractUrl(requestUrl: unknown): UrlInfo {
     let url = '';
     let pathname = '/';
 
@@ -276,10 +222,9 @@ describe('${testName}', function() {
         url = requestUrl.toString();
         pathname = new globalThis.URL(url).pathname || '/';
       } catch {
-        // If URL parsing fails, try to extract path from raw URL
         if (typeof requestUrl === 'string') {
           const pathMatch = requestUrl.match(/\/[^?#]*/);
-          pathname = pathMatch ? pathMatch[0] : '/';
+          pathname = pathMatch ? (pathMatch[0] as string) : '/';
         }
       }
     }
@@ -288,11 +233,11 @@ describe('${testName}', function() {
   }
 
   /**
-   * Extract request body
+   * Extract a parsed request body.
    * @private
    */
   private static _extractRequestBody(requestBody?: PostmanRequest['body']): unknown {
-    if (!requestBody || requestBody.mode !== 'raw' || !requestBody.raw) {
+    if (requestBody?.mode !== 'raw' || !requestBody.raw) {
       return null;
     }
 
@@ -304,37 +249,41 @@ describe('${testName}', function() {
   }
 
   /**
-   * Extract headers
+   * Extract enabled headers as a record.
    * @private
    */
-  private static _extractHeaders(requestHeaders?: PostmanRequest['header']): Record<string, string> {
-    if (!requestHeaders || !Array.isArray(requestHeaders)) {
+  private static _extractHeaders(
+    requestHeaders?: PostmanRequest['header']
+  ): Record<string, string> {
+    if (!Array.isArray(requestHeaders)) {
       return {};
     }
 
-    return requestHeaders.reduce((acc, header) => {
-      if (header.key && header.value && !header.disabled) {
-        acc[header.key] = header.value;
-      }
-      return acc;
-    }, {} as Record<string, string>);
+    return requestHeaders.reduce(
+      (acc, header) => {
+        if (header.key && header.value && !header.disabled) {
+          acc[header.key] = header.value;
+        }
+        return acc;
+      },
+      {} as Record<string, string>
+    );
   }
 
   /**
-   * Extract test script from events
+   * Extract the `test` event script from an item's events.
    * @private
    */
   private static _extractTestScript(events?: PostmanEvent[]): string {
-    if (!events || !Array.isArray(events)) {
+    if (!Array.isArray(events)) {
       return '';
     }
-
     const testEvent = events.find(e => e.listen === 'test');
     return testEvent?.script?.exec?.join('\n') || '';
   }
 
   /**
-   * Generate request code based on method and parameters
+   * Generate the `fetch`-client request line for a request.
    * @private
    */
   private static _generateRequestCode(
@@ -343,52 +292,82 @@ describe('${testName}', function() {
     body: unknown,
     headers: Record<string, string>
   ): string {
-    let code = `const response = await request.${method}('${pathname}')`;
+    const hasHeaders = Object.keys(headers).length > 0;
+    const headerArg = hasHeaders ? `, ${JSON.stringify(headers)}` : '';
 
-    // Add headers if any
-    if (Object.keys(headers).length > 0) {
-      Object.entries(headers).forEach(([key, value]) => {
-        code += `\n        .set('${key}', '${value}')`;
-      });
+    if (METHODS_WITH_BODY.has(method)) {
+      const bodyArg = body ? `, ${JSON.stringify(body, null, 2)}` : hasHeaders ? ', undefined' : '';
+      return `const response = await request.${method}('${pathname}'${bodyArg}${headerArg});`;
     }
 
-    // Add body if present
-    if (body) {
-      if (typeof body === 'object') {
-        code += `\n        .send(${JSON.stringify(body, null, 2)})`;
-      } else {
-        code += `\n        .send('${body}')`;
-      }
-    }
-
-    code += ';';
-    return code;
+    return `const response = await request.${method}('${pathname}'${headerArg});`;
   }
 
   /**
-   * Generate setup file content
+   * Generate the `setup.ts` content for regular (non full-project) output.
    * @param baseUrl - Base URL for the API
    * @param environment - Environment variables
    * @returns Setup file content
    */
-  static generateSetupFile(baseUrl: string, environment: EnvironmentVariables | null = null): string {
+  static generateSetupFile(
+    baseUrl: string,
+    environment: EnvironmentVariables | null = null
+  ): string {
     const envVars = environment ? JSON.stringify(environment, null, 2) : 'null';
 
-    return `import supertest from 'supertest';
-import { expect } from 'chai';
-import 'dotenv/config';
+    return `import { expect } from 'bun:test';
 
-// Base URL configuration
-const BASE_URL = process.env.API_BASE_URL || '${baseUrl}';
-export const request = supertest(BASE_URL);
+// Base URL configuration (Bun auto-loads .env)
+const BASE_URL = process.env.API_BASE_URL ?? '${baseUrl}';
 
 // Environment variables from Postman
-export const env = ${envVars};
+export const env: Record<string, string> | null = ${envVars};
 
 // Request timeout configuration
-export const DEFAULT_TIMEOUT = process.env.TEST_TIMEOUT || 10000;
+export const DEFAULT_TIMEOUT = Number(process.env.TEST_TIMEOUT ?? 10000);
 
-// Re-export expect for convenience
+export interface ApiResponse<T = unknown> {
+  status: number;
+  statusText: string;
+  headers: Headers;
+  body: T;
+}
+
+async function send(
+  method: string,
+  pathname: string,
+  body?: unknown,
+  headers: Record<string, string> = {}
+): Promise<ApiResponse> {
+  const url = pathname.startsWith('http') ? pathname : \`\${BASE_URL}\${pathname}\`;
+  const init: RequestInit = { method, headers: { 'Content-Type': 'application/json', ...headers } };
+
+  if (body !== undefined && body !== null) {
+    init.body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
+
+  const response = await fetch(url, init);
+  const text = await response.text();
+
+  let parsed: unknown = text;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    parsed = text;
+  }
+
+  return { status: response.status, statusText: response.statusText, headers: response.headers, body: parsed };
+}
+
+// Lightweight fetch-based client (Supertest-like ergonomics)
+export const request = {
+  get: (path: string, headers?: Record<string, string>) => send('GET', path, undefined, headers),
+  post: (path: string, body?: unknown, headers?: Record<string, string>) => send('POST', path, body, headers),
+  put: (path: string, body?: unknown, headers?: Record<string, string>) => send('PUT', path, body, headers),
+  patch: (path: string, body?: unknown, headers?: Record<string, string>) => send('PATCH', path, body, headers),
+  delete: (path: string, headers?: Record<string, string>) => send('DELETE', path, undefined, headers)
+};
+
 export { expect };
 `;
   }

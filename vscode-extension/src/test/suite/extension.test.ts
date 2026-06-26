@@ -1,4 +1,4 @@
-import * as assert from 'assert';
+import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 
 /* global suite, test */
@@ -18,10 +18,14 @@ suite('Extension Test Suite', () => {
 
     const commands = await vscode.commands.getCommands(true);
 
-    assert.ok(commands.includes('postmortem.generateFromCollection'),
-      'generateFromCollection command should be registered');
-    assert.ok(commands.includes('postmortem.generateFromFile'),
-      'generateFromFile command should be registered');
+    assert.ok(
+      commands.includes('postmortem.generateFromCollection'),
+      'generateFromCollection command should be registered'
+    );
+    assert.ok(
+      commands.includes('postmortem.generateFromFile'),
+      'generateFromFile command should be registered'
+    );
   });
 
   test('Configuration should have default values', () => {

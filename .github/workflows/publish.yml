@@ -35,26 +35,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Node + npm are used for the publish step (npm provenance + registry auth)
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install workspace dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Build CLI
-        run: npm run build:cli
+        run: bun run build
 
-      - name: Run CLI tests
-        run: npm test
+      - name: Run tests
+        run: bun run test
 
-      - name: Run CLI linting
-        run: npm run lint
+      - name: Lint
+        run: bun run lint
 
       - name: Publish CLI to NPM
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -68,38 +74,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
 
-      - name: Install workspace dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
       - name: Build all packages
-        run: npm run build
+        run: bun run build:all
 
-      - name: Run extension linting
+      - name: Lint extension
         working-directory: ./vscode-extension
-        run: npm run lint
+        run: bun run lint
 
       - name: Verify extension build integrity
         working-directory: ./vscode-extension
         run: |
-          # Verify extension.js was compiled
           test -f dist/extension.js
           echo "✅ Extension build verified"
 
-      - name: Install vsce
-        run: npm install -g @vscode/vsce
-
       - name: Package VSCode extension
         working-directory: ./vscode-extension
-        run: vsce package
+        run: npx --yes @vscode/vsce package
 
       - name: Publish VSCode extension
         working-directory: ./vscode-extension
-        run: vsce publish
+        run: npx --yes @vscode/vsce publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 

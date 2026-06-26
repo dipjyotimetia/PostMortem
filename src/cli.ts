@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 
-import * as path from 'path';
+import * as path from 'node:path';
 import { Command } from 'commander';
-import { logger } from './utils/logger';
-import { FileSystem } from './utils/filesystem';
-import { Validator, CLIOptions, PostmanCollection, PostmanEnvironment } from './utils/validator';
 import { PostmanConverter } from './postman-converter';
+import { FileSystem } from './utils/filesystem';
+import { logger } from './utils/logger';
+import {
+  type CLIOptions,
+  type PostmanCollection,
+  type PostmanEnvironment,
+  Validator
+} from './utils/validator';
+
+const VERSION = '2.0.0';
 
 /**
  * CLI application for postmortem
@@ -21,15 +28,23 @@ class CLI {
   private setupCommands(): void {
     this.program
       .name('postmortem')
-      .description('Convert Postman collections to Mocha/Supertest tests')
-      .version('1.1.0')
+      .description('Convert Postman collections into Bun-native tests (bun:test + fetch)')
+      .version(VERSION)
       .requiredOption('-c, --collection <path>', 'Path to Postman collection JSON file')
       .option('-o, --output <directory>', 'Output directory for the generated test files', './test')
       .option('-e, --environment <path>', 'Path to Postman environment JSON file (optional)')
       .option('-d, --debug', 'Enable debug logging', false)
       .option('--no-setup', 'Skip creating setup.ts file')
-      .option('--flat', 'Generate all test files in output directory (ignore folder structure)', false)
-      .option('--full-project', 'Generate a complete API test framework project with all configuration files', false)
+      .option(
+        '--flat',
+        'Generate all test files in output directory (ignore folder structure)',
+        false
+      )
+      .option(
+        '--full-project',
+        'Generate a complete API test framework project with all configuration files',
+        false
+      )
       .option('--silent', 'Suppress all output except errors', false);
   }
 
@@ -51,16 +66,18 @@ class CLI {
       // Validate options
       const validation = Validator.validateOptions(options);
       if (!validation.isValid) {
-        validation.errors.forEach(error => logger.error(error));
+        for (const error of validation.errors) {
+          logger.error(error);
+        }
         process.exit(1);
       }
 
-      if (validation.warnings.length > 0) {
-        validation.warnings.forEach(warning => logger.warn(warning));
+      for (const warning of validation.warnings) {
+        logger.warn(warning);
       }
 
       // Resolve paths
-      const collectionPath = path.resolve(options.collection!);
+      const collectionPath = path.resolve(options.collection ?? '');
       const outputPath = path.resolve(options.output || './test');
       const environmentPath = options.environment ? path.resolve(options.environment) : null;
 
@@ -71,7 +88,7 @@ class CLI {
       }
 
       // Read collection
-      let collectionJson;
+      let collectionJson: unknown;
       try {
         collectionJson = await FileSystem.readJsonFile(collectionPath);
         logger.debug('Collection file read successfully');
@@ -93,7 +110,9 @@ class CLI {
       }
 
       // Validate collection before processing
-      const collectionValidation = Validator.validateCollection(collectionJson as PostmanCollection);
+      const collectionValidation = Validator.validateCollection(
+        collectionJson as PostmanCollection
+      );
       if (!collectionValidation.isValid) {
         logger.error(`Invalid collection: ${collectionValidation.errors.join(', ')}`);
         process.exit(1);
@@ -124,7 +143,6 @@ class CLI {
       if (results.environment && Object.keys(results.environment).length > 0) {
         logger.info(`🌍 Environment variables: ${Object.keys(results.environment).length}`);
       }
-
     } catch (error) {
       logger.error(`Conversion failed: ${(error as Error).message}`);
       if (process.env.DEBUG) {
@@ -135,14 +153,12 @@ class CLI {
   }
 }
 
-// Run CLI if this file is executed directly
-if (require.main === module) {
-  const cli = new CLI();
-  cli.run().catch(error => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
-}
-
 export { CLI };
 export default CLI;
+
+// This module is the CLI entry point (bin script / `bun run src/cli.ts`).
+const cli = new CLI();
+cli.run().catch(error => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});
