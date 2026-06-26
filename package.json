@@ -1,6 +1,6 @@
 {
   "name": "@dipjyotimetia/postmortem",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Convert Postman collections into Bun-native API tests (bun:test + fetch)",
   "type": "module",
   "main": "./dist/index.cjs",

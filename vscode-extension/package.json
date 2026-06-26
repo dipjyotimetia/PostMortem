@@ -2,7 +2,7 @@
   "name": "postmortem",
   "displayName": "PostMortem - Postman to Bun Tests",
   "description": "🚀 Generate Bun-native (bun:test + fetch) API tests from Postman collections",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "publisher": "dipjyotimetia",
   "icon": "icon.png",
   "repository": {
